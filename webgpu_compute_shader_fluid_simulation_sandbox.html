@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AETHER // WebGPU Navier-Stokes Fluid Compute Sandbox</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #04060a;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #e2e8f0;
+    }
+    .font-mono-tech {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .cyber-glass {
+      background: rgba(9, 13, 22, 0.74);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border: 1px solid rgba(56, 189, 248, 0.16);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+    .cyber-panel-subtle {
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    input[type="range"].cyber-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 999px;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"].cyber-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #38bdf8;
+      border: 2px solid #e0f2fe;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.85);
+      cursor: pointer;
+      transition: transform 0.12s ease, background-color 0.12s ease;
+    }
+    input[type="range"].cyber-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.18);
+      background: #7dd3fc;
+    }
+    input[type="range"].cyber-slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #38bdf8;
+      border: 2px solid #e0f2fe;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.85);
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+    .preset-pill {
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .preset-pill.active {
+      border-color: rgba(56, 189, 248, 0.85);
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.28), inset 0 0 12px rgba(56, 189, 248, 0.15);
+      background: rgba(14, 116, 144, 0.28);
+    }
+    .cyber-btn {
+      transition: all 0.15s ease;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    .cyber-btn:hover {
+      border-color: rgba(56, 189, 248, 0.6);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.22);
+      transform: translateY(-1px);
+    }
+    .cyber-btn:active {
+      transform: translateY(0px);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 5px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.3);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.3);
+      border-radius: 999px;
+    }
+    #brushCursor {
+      pointer-events: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      transform: translate(-50%, -50%);
+      border-radius: 9999px;
+      z-index: 20;
+      transition: width 0.08s ease, height 0.08s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+  </style>
+</head>
+<body class="relative w-screen h-screen overflow-hidden bg-[#04060a] select-none">
+
+  <canvas id="fluidCanvas" class="block w-full h-full cursor-crosshair touch-none"></canvas>
+
+  <div id="brushCursor" class="hidden border border-sky-400/60 shadow-[0_0_15px_rgba(56,189,248,0.35)]"></div>
+
+  <header class="fixed top-4 left-4 right-4 z-30 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
+    <div class="cyber-glass rounded-2xl px-4 py-2.5 flex items-center gap-3.5 pointer-events-auto">
+      <div class="relative flex items-center justify-center w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-400/30">
+        <svg class="w-5 h-5 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+        </svg>
+        <span id="statusDot" class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]"></span>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm font-bold tracking-wider uppercase text-slate-100">AETHER // WEBGPU FLUID</h1>
+          <span id="statusBadge" class="font-mono-tech text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-400/30">
+            COMPUTE INITIALIZING
+          </span>
+        </div>
+        <p id="adapterInfoText" class="font-mono-tech text-[11px] text-slate-400 truncate max-w-[260px] sm:max-w-[420px]">
+          Probing navigator.gpu hardware adapter...
+        </p>
+      </div>
+    </div>
+
+    <div class="cyber-glass rounded-2xl px-4 py-2.5 flex items-center gap-4 sm:gap-6 pointer-events-auto font-mono-tech">
+      <div class="flex flex-col">
+        <span class="text-[10px] uppercase tracking-wider text-slate-400">Framerate</span>
+        <div class="flex items-baseline gap-1">
+          <span id="fpsValue" class="text-sm sm:text-base font-bold text-sky-400">--</span>
+          <span class="text-[10px] text-slate-500">FPS</span>
+        </div>
+      </div>
+      <div class="h-6 w-px bg-slate-800"></div>
+      <div class="flex flex-col">
+        <span class="text-[10px] uppercase tracking-wider text-slate-400">Frametime</span>
+        <div class="flex items-baseline gap-1">
+          <span id="frametimeValue" class="text-sm sm:text-base font-bold text-indigo-300">--</span>
+          <span class="text-[10px] text-slate-500">ms</span>
+        </div>
+      </div>
+      <div class="h-6 w-px bg-slate-800"></div>
+      <div class="flex flex-col">
+        <span class="text-[10px] uppercase tracking-wider text-slate-400">Sim Grid</span>
+        <select id="gridResSelect" class="bg-transparent text-sm sm:text-base font-bold text-emerald-300 focus:outline-none cursor-pointer">
+          <option value="512" class="bg-slate-950 text-slate-200">512x512</option>
+          <option value="1024" selected class="bg-slate-950 text-slate-200">1024x1024</option>
+          <option value="1536" class="bg-slate-950 text-slate-200">1536x1536</option>
+        </select>
+      </div>
+      <div class="h-6 w-px bg-slate-800 hidden sm:block"></div>
+      <div class="hidden sm:flex items-center gap-2">
+        <span id="interactionModeBadge" class="text-[11px] px-2.5 py-1 rounded-lg bg-sky-500/15 border border-sky-400/30 text-sky-300 font-medium">
+          MODE: DYE IMPULSE
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <aside id="controlPanel" class="fixed top-20 right-4 bottom-4 w-[340px] max-w-[calc(100vw-2rem)] z-30 flex flex-col pointer-events-none">
+    <div class="cyber-glass rounded-2xl flex flex-col max-h-full overflow-hidden pointer-events-auto">
+      <div class="px-4 py-3.5 border-b border-slate-800/80 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]"></span>
+          <h2 class="text-xs font-bold uppercase tracking-widest text-slate-200 font-mono-tech">Navier-Stokes Control Surface</h2>
+        </div>
+        <button id="collapsePanelBtn" class="text-slate-400 hover:text-sky-300 p-1 rounded-lg transition-colors" title="Toggle Controls">
+          <svg id="collapseIcon" class="w-4 h-4 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 15l-6-6-6 6"/>
+          </svg>
+        </button>
+      </div>
+
+      <div id="panelBody" class="p-4 space-y-4 overflow-y-auto custom-scrollbar">
+        <div class="grid grid-cols-2 gap-2">
+          <button id="pauseBtn" class="cyber-btn rounded-xl py-2 px-3 bg-slate-900/80 text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5">
+            <span id="pauseIndicator" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span id="pauseBtnText">Pause Sim</span>
+          </button>
+          <button id="stepBtn" class="cyber-btn rounded-xl py-2 px-3 bg-slate-900/80 text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>
+            </svg>
+            <span>Single Step</span>
+          </button>
+          <button id="randomSplatBtn" class="cyber-btn rounded-xl py-2 px-3 bg-sky-500/15 border-sky-400/30 text-xs font-semibold text-sky-300 flex items-center justify-center gap-1.5">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+            <span>Random Splat</span>
+          </button>
+          <button id="clearBtn" class="cyber-btn rounded-xl py-2 px-3 bg-rose-500/10 border-rose-400/25 text-xs font-semibold text-rose-300 flex items-center justify-center gap-1.5">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+            </svg>
+            <span>Clear Fluid</span>
+          </button>
+        </div>
+
+        <div class="cyber-panel-subtle rounded-xl p-3 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300 font-mono-tech">Physics Solver Parameters</span>
+            <button id="resetParamsBtn" class="text-[10px] font-mono-tech text-sky-400 hover:underline">Reset</button>
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs">
+              <label for="viscositySlider" class="text-slate-300 font-medium">Viscosity (Diffusion)</label>
+              <span id="viscosityVal" class="font-mono-tech text-sky-400">0.08</span>
+            </div>
+            <input id="viscositySlider" type="range" min="0.0" max="1.0" step="0.01" value="0.08" class="cyber-slider" />
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs">
+              <label for="dyeDissSlider" class="text-slate-300 font-medium">Dye Dissipation Rate</label>
+              <span id="dyeDissVal" class="font-mono-tech text-sky-400">0.988</span>
+            </div>
+            <input id="dyeDissSlider" type="range" min="0.900" max="0.999" step="0.001" value="0.988" class="cyber-slider" />
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs">
+              <label for="velDissSlider" class="text-slate-300 font-medium">Velocity Dissipation</label>
+              <span id="velDissVal" class="font-mono-tech text-sky-400">0.992</span>
+            </div>
+            <input id="velDissSlider" type="range" min="0.900" max="0.999" step="0.001" value="0.992" class="cyber-slider" />
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs">
+              <label for="pressureIterSlider" class="text-slate-300 font-medium">Pressure Iterations</label>
+              <span id="pressureIterVal" class="font-mono-tech text-sky-400">30</span>
+            </div>
+            <input id="pressureIterSlider" type="range" min="10" max="60" step="1" value="30" class="cyber-slider" />
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs">
+              <label for="vorticitySlider" class="text-slate-300 font-medium">Vorticity Curl</label>
+              <span id="vorticityVal" class="font-mono-tech text-sky-400">28.0</span>
+            </div>
+            <input id="vorticitySlider" type="range" min="0.0" max="50.0" step="0.5" value="28.0" class="cyber-slider" />
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs">
+              <label for="brushRadiusSlider" class="text-slate-300 font-medium">Brush Radius (Wheel)</label>
+              <span id="brushRadiusVal" class="font-mono-tech text-sky-400">0.022</span>
+            </div>
+            <input id="brushRadiusSlider" type="range" min="0.005" max="0.080" step="0.001" value="0.022" class="cyber-slider" />
+          </div>
+        </div>
+
+        <div class="cyber-panel-subtle rounded-xl p-3 space-y-2.5">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300 font-mono-tech block">Neon Color Presets</span>
+          <div id="presetContainer" class="grid grid-cols-2 gap-2">
+            <button data-preset="cyber" class="preset-pill active rounded-xl p-2 border border-slate-700/70 bg-slate-900/70 text-left flex flex-col gap-1.5">
+              <div class="flex items-center gap-1">
+                <span class="w-3 h-3 rounded-full bg-[#00f5d4]"></span>
+                <span class="w-3 h-3 rounded-full bg-[#ff2a85]"></span>
+                <span class="w-3 h-3 rounded-full bg-[#7b2cbf]"></span>
+              </div>
+              <span class="text-[11px] font-semibold text-slate-200">Neon Cyber</span>
+            </button>
+            <button data-preset="solar" class="preset-pill rounded-xl p-2 border border-slate-700/70 bg-slate-900/70 text-left flex flex-col gap-1.5">
+              <div class="flex items-center gap-1">
+                <span class="w-3 h-3 rounded-full bg-[#ffbe0b]"></span>
+                <span class="w-3 h-3 rounded-full bg-[#fb5607]"></span>
+                <span class="w-3 h-3 rounded-full bg-[#ff006e]"></span>
+              </div>
+              <span class="text-[11px] font-semibold text-slate-200">Solar Flare</span>
+            </button>
+            <button data-preset="abyss" class="preset-pill rounded-xl p-2 border border-slate-700/70 bg-slate-900/70 text-left flex flex-col gap-1.5">
+              <div class="flex items-center gap-1">
+                <span class="w-3 h-3 rounded-full bg-[#10b981]"></span>
+                <span class="w-3 h-3 rounded-full bg-[#06b6d4]"></span>
+                <span class="w-3 h-3 rounded-full bg-[#3b82f6]"></span>
+              </div>
+              <span class="text-[11px] font-semibold text-slate-200">Deep Abyss</span>
+            </button>
+            <button data-preset="mono" class="preset-pill rounded-xl p-2 border border-slate-700/70 bg-slate-900/70 text-left flex flex-col gap-1.5">
+              <div class="flex items-center gap-1">
+                <span class="w-3 h-3 rounded-full bg-[#f8fafc]"></span>
+                <span class="w-3 h-3 rounded-full bg-[#94a3b8]"></span>
+                <span class="w-3 h-3 rounded-full bg-[#475569]"></span>
+              </div>
+              <span class="text-[11px] font-semibold text-slate-200">Monochrome Smoke</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="cyber-panel-subtle rounded-xl p-3 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300 font-mono-tech">Shader Telemetry & Field View</span>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 font-mono-tech text-[11px]">
+            <button data-view="0" class="view-mode-btn cyber-btn rounded-lg py-1.5 px-2 bg-sky-500/20 border-sky-400/50 text-sky-200 font-medium">Dye + Bloom</button>
+            <button data-view="1" class="view-mode-btn cyber-btn rounded-lg py-1.5 px-2 bg-slate-900/70 text-slate-300 font-medium">Velocity Field</button>
+            <button data-view="2" class="view-mode-btn cyber-btn rounded-lg py-1.5 px-2 bg-slate-900/70 text-slate-300 font-medium">Vorticity Curl</button>
+            <button data-view="3" class="view-mode-btn cyber-btn rounded-lg py-1.5 px-2 bg-slate-900/70 text-slate-300 font-medium">Pressure Map</button>
+          </div>
+          <label class="flex items-center justify-between pt-1 text-xs text-slate-300 cursor-pointer">
+            <span>Velocity Vector Glow Overlay</span>
+            <input id="velGlowToggle" type="checkbox" checked class="w-4 h-4 accent-sky-400 rounded cursor-pointer" />
+          </label>
+        </div>
+
+        <div class="space-y-2">
+          <button id="snapshotBtn" class="w-full cyber-btn rounded-xl py-2.5 px-4 bg-gradient-to-r from-sky-500/25 to-indigo-500/25 border-sky-400/40 text-xs font-bold uppercase tracking-wider text-sky-200 flex items-center justify-center gap-2">
+            <svg class="w-4 h-4 text-sky-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            <span>Capture Snapshot (PNG)</span>
+          </button>
+          <div class="text-[11px] text-slate-400 font-mono-tech leading-relaxed bg-slate-950/60 rounded-xl p-2.5 border border-slate-800/70">
+            <div><span class="text-sky-400">LMB Drag:</span> Inject Dye & Impulse</div>
+            <div><span class="text-pink-400">RMB / Shift + Drag:</span> Vortex Force Field</div>
+            <div><span class="text-emerald-400">Scroll Wheel:</span> Scale Brush Radius</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div id="toastBanner" class="fixed bottom-5 left-5 z-40 pointer-events-none opacity-0 translate-y-2 transition-all duration-300">
+    <div class="cyber-glass rounded-xl px-4 py-2.5 text-xs font-mono-tech text-sky-300 flex items-center gap-2.5">
+      <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
+      <span id="toastText">Snapshot exported successfully.</span>
+    </div>
+  </div>
+
+  <div id="diagModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xl">
+    <div class="cyber-glass max-w-lg w-full rounded-3xl p-6 sm:p-8 border border-rose-500/30 shadow-[0_0_60px_rgba(244,63,94,0.18)] space-y-5">
+      <div class="flex items-center gap-3.5">
+        <div class="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-400/30 flex items-center justify-center text-rose-400 shrink-0">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div>
+          <span class="font-mono-tech text-[10px] uppercase tracking-widest px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-400/30">Hardware Guard</span>
+          <h3 class="text-lg font-bold text-white mt-1">WebGPU Compute Context Unavailable</h3>
+        </div>
+      </div>
+
+      <p id="diagReasonText" class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+        This simulation requires a native WebGPU hardware adapter and WGSL compute shader pipeline. No fallback to Canvas 2D is permitted by system constraints.
+      </p>
+
+      <div class="bg-slate-950/90 border border-slate-800 rounded-2xl p-4 space-y-2.5 font-mono-tech text-xs">
+        <div class="text-slate-400 uppercase text-[10px] tracking-wider">Troubleshooting Steps:</div>
+        <div class="text-slate-200">1. Ensure Hardware Acceleration is enabled in browser settings.</div>
+        <div class="text-slate-200">2. Enable WebGPU flag in Chromium / Edge:</div>
+        <div class="flex items-center justify-between gap-2 bg-slate-900 px-3 py-2 rounded-xl border border-sky-500/30 text-sky-300">
+          <code id="flagCodeText" class="truncate">edge://flags/#enable-unsafe-webgpu</code>
+          <button id="copyFlagBtn" class="px-2.5 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 text-[11px] shrink-0 transition-colors">
+            Copy URL
+          </button>
+        </div>
+        <div class="text-slate-200">3. Open via Secure Context (<code class="text-emerald-300">https://</code>, <code class="text-emerald-300">localhost</code>, or local file).</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    const COLOR_PRESETS = {
+      cyber: [
+        [0.0, 0.96, 0.83],
+        [1.0, 0.16, 0.52],
+        [0.48, 0.17, 0.75],
+        [0.0, 0.71, 0.98]
+      ],
+      solar: [
+        [1.0, 0.75, 0.04],
+        [0.98, 0.34, 0.03],
+        [1.0, 0.0, 0.43],
+        [1.0, 0.92, 0.35]
+      ],
+      abyss: [
+        [0.06, 0.73, 0.51],
+        [0.02, 0.71, 0.83],
+        [0.23, 0.51, 0.96],
+        [0.18, 0.95, 0.78]
+      ],
+      mono: [
+        [0.97, 0.98, 0.99],
+        [0.65, 0.71, 0.79],
+        [0.42, 0.47, 0.55],
+        [0.82, 0.86, 0.92]
+      ]
+    };
+
+    const state = {
+      gridSize: 1024,
+      viscosity: 0.08,
+      dyeDissipation: 0.988,
+      velDissipation: 0.992,
+      pressureIterations: 30,
+      vorticity: 28.0,
+      brushRadius: 0.022,
+      preset: 'cyber',
+      renderMode: 0,
+      velGlow: 1.0,
+      paused: false,
+      stepOnce: false,
+      captureRequested: false,
+      colorIndex: 0
+    };
+
+    const WGSL_SHADERS = `
+struct SimParams {
+  gridWidth: f32,
+  gridHeight: f32,
+  dt: f32,
+  velDissipation: f32,
+  dyeDissipation: f32,
+  vorticity: f32,
+  viscosity: f32,
+  renderMode: f32,
+  velGlow: f32,
+  time: f32,
+  aspectRatio: f32,
+  pad0: f32,
+};
+
+struct SplatParams {
+  pointX: f32,
+  pointY: f32,
+  dx: f32,
+  dy: f32,
+  colorR: f32,
+  colorG: f32,
+  colorB: f32,
+  radius: f32,
+  mode: f32,
+  aspectRatio: f32,
+  pad0: f32,
+  pad1: f32,
+};
+
+@group(0) @binding(0) var<uniform> sim: SimParams;
+@group(0) @binding(1) var texInA: texture_2d<f32>;
+@group(0) @binding(2) var texInB: texture_2d<f32>;
+@group(0) @binding(3) var texOut: texture_storage_2d<rgba16float, write>;
+@group(0) @binding(4) var<uniform> splat: SplatParams;
+
+fn clampCoord(coord: vec2<i32>, dims: vec2<i32>) -> vec2<i32> {
+  return clamp(coord, vec2<i32>(0, 0), dims - vec2<i32>(1, 1));
+}
+
+fn loadTex(tex: texture_2d<f32>, coord: vec2<i32>, dims: vec2<i32>) -> vec4<f32> {
+  return textureLoad(tex, clampCoord(coord, dims), 0);
+}
+
+fn sampleBilinear(tex: texture_2d<f32>, pos: vec2<f32>, dims: vec2<i32>) -> vec4<f32> {
+  let clamped = clamp(pos, vec2<f32>(0.5, 0.5), vec2<f32>(dims) - vec2<f32>(0.5, 0.5)) - vec2<f32>(0.5, 0.5);
+  let base = vec2<i32>(floor(clamped));
+  let f = fract(clamped);
+  let c00 = loadTex(tex, base + vec2<i32>(0, 0), dims);
+  let c10 = loadTex(tex, base + vec2<i32>(1, 0), dims);
+  let c01 = loadTex(tex, base + vec2<i32>(0, 1), dims);
+  let c11 = loadTex(tex, base + vec2<i32>(1, 1), dims);
+  return mix(mix(c00, c10, f.x), mix(c01, c11, f.x), f.y);
+}
+
+@compute @workgroup_size(8, 8, 1)
+fn splat_velocity(@builtin(global_invocation_id) id: vec3<u32>) {
+  let dims = vec2<i32>(i32(sim.gridWidth), i32(sim.gridHeight));
+  let coord = vec2<i32>(id.xy);
+  if (coord.x >= dims.x || coord.y >= dims.y) {
+    return;
+  }
+  let uv = (vec2<f32>(coord) + vec2<f32>(0.5, 0.5)) / vec2<f32>(dims);
+  var diff = uv - vec2<f32>(splat.pointX, splat.pointY);
+  diff.x = diff.x * splat.aspectRatio;
+  let distSq = dot(diff, diff);
+  let radSq = max(splat.radius * splat.radius, 0.000001);
+  let falloff = exp(-distSq / radSq);
+  let baseVel = loadTex(texInA, coord, dims).xy;
+  var deltaVel = vec2<f32>(splat.dx, splat.dy) * falloff;
+  if (splat.mode > 0.5) {
+    let dist = sqrt(distSq) + 0.0001;
+    let dir = diff / dist;
+    let tangent = vec2<f32>(-dir.y, dir.x);
+    let vortexFalloff = exp(-distSq / (radSq * 2.2));
+    let swirl = tangent * 36.0 - dir * 12.0;
+    deltaVel = (swirl + vec2<f32>(splat.dx, splat.dy) * 0.65) * vortexFalloff;
+  }
+  let outVel = clamp(baseVel + deltaVel, vec2<f32>(-120.0, -120.0), vec2<f32>(120.0, 120.0));
+  textureStore(texOut, coord, vec4<f32>(outVel, 0.0, 1.0));
+}
+
+@compute @workgroup_size(8, 8, 1)
+fn splat_dye(@builtin(global_invocation_id) id: vec3<u32>) {
+  let dims = vec2<i32>(i32(sim.gridWidth), i32(sim.gridHeight));
+  let coord = vec2<i32>(id.xy);
+  if (coord.x >= dims.x || coord.y >= dims.y) {
+    return;
+  }
+  let uv = (vec2<f32>(coord) + vec2<f32>(0.5, 0.5)) / vec2<f32>(dims);
+  var diff = uv - vec2<f32>(splat.pointX, splat.pointY);
+  diff.x = diff.x * splat.aspectRatio;
+  let distSq = dot(diff, diff);
+  let radSq = max(splat.radius * splat.radius, 0.000001);
+  var falloff = exp(-distSq / radSq);
+  if (splat.mode > 0.5) {
+    let ring = exp(-pow(sqrt(distSq) - splat.radius * 0.75, 2.0) / (radSq * 0.35));
+    falloff = ring * 0.65;
+  }
+  let baseDye = loadTex(texInA, coord, dims).rgb;
+  let splatColor = vec3<f32>(splat.colorR, splat.colorG, splat.colorB);
+  let newDye = clamp(baseDye + splatColor * falloff * 0.85, vec3<f32>(0.0), vec3<f32>(6.0));
+  textureStore(texOut, coord, vec4<f32>(newDye, 1.0));
+}
+
+@compute @workgroup_size(8, 8, 1)
+fn compute_curl(@builtin(global_invocation_id) id: vec3<u32>) {
+  let dims = vec2<i32>(i32(sim.gridWidth), i32(sim.gridHeight));
+  let coord = vec2<i32>(id.xy);
+  if (coord.x >= dims.x || coord.y >= dims.y) {
+    return;
+  }
+  let L = loadTex(texInA, coord - vec2<i32>(1, 0), dims).y;
+  let R = loadTex(texInA, coord + vec2<i32>(1, 0), dims).y;
+  let B = loadTex(texInA, coord - vec2<i32>(0, 1), dims).x;
+  let T = loadTex(texInA, coord + vec2<i32>(0, 1), dims).x;
+  let vorticity = 0.5 * ((R - L) - (T - B));
+  textureStore(texOut, coord, vec4<f32>(vorticity, 0.0, 0.0, 1.0));
+}
+
+@compute @workgroup_size(8, 8, 1)
+fn apply_vorticity(@builtin(global_invocation_id) id: vec3<u32>) {
+  let dims = vec2<i32>(i32(sim.gridWidth), i32(sim.gridHeight));
+  let coord = vec2<i32>(id.xy);
+  if (coord.x >= dims.x || coord.y >= dims.y) {
+    return;
+  }
+  let L = abs(loadTex(texInB, coord - vec2<i32>(1, 0), dims).x);
+  let R = abs(loadTex(texInB, coord + vec2<i32>(1, 0), dims).x);
+  let B = abs(loadTex(texInB, coord - vec2<i32>(0, 1), dims).x);
+  let T = abs(loadTex(texInB, coord + vec2<i32>(0, 1), dims).x);
+  let C = loadTex(texInB, coord, dims).x;
+  var force = 0.5 * vec2<f32>(T - B, R - L);
+  let len = length(force) + 0.0001;
+  force = (force / len) * sim.vorticity * C * vec2<f32>(1.0, -1.0);
+  let vel = loadTex(texInA, coord, dims).xy + force * sim.dt;
+  textureStore(texOut, coord, vec4<f32>(vel, 0.0, 1.0));
+}
+
+@compute @workgroup_size(8, 8, 1)
+fn advect_velocity(@builtin(global_invocation_id) id: vec3<u32>) {
+  let dims = vec2<i32>(i32(sim.gridWidth), i32(sim.gridHeight));
+  let coord = vec2<i32>(id.xy);
+  if (coord.x >= dims.x || coord.y >= dims.y) {
+    return;
+  }
+  let pos = vec2<f32>(coord) + vec2<f32>(0.5, 0.5);
+  let vel = loadTex(texInA, coord, dims).xy;
+  let backPos = pos - sim.dt * vel * vec2<f32>(sim.gridWidth, sim.gridHeight) * 0.25;
+  var advected = sampleBilinear(texInA, backPos, dims).xy * sim.velDissipation;
+  if (coord.x <= 1 || coord.x >= dims.x - 2) {
+    advected.x = -advected.x * 0.5;
+  }
+  if (coord.y <= 1 || coord.y >= dims.y - 2) {
+    advected.y = -advected.y * 0.5;
+  }
+  textureStore(texOut, coord, vec4<f32>(advected, 0.0, 1.0));
+}
+
+@compute @workgroup_size(8, 8, 1)
+fn viscosity_step(@builtin(global_invocation_id) id: vec3<u32>) {
+  let dims = vec2<i32>(i32(sim.gridWidth), i32(sim.gridHeight));
+  let coord = vec2<i32>(id.xy);
+  if (coord.x >= dims.x || coord.y >= dims.y) {
+    return;
+  }
+  let C = loadTex(texInA, coord, dims).xy;
+  let L = loadTex(texInA, coord - vec2<i32>(1, 0), dims).xy;
+  let R = loadTex(texInA, coord + vec2<i32>(1, 0), dims).xy;
+  let B = loadTex(texInA, coord - vec2<i32>(0, 1), dims).xy;
+  let T = loadTex(texInA, coord + vec2<i32>(0, 1), dims).xy;
+  let alpha = sim.viscosity * 0.85;
+  let diffused = (C + alpha * (L + R + B + T)) / (1.0 + 4.0 * alpha);
+  textureStore(texOut, coord, vec4<f32>(diffused, 0.0, 1.0));
+}
+
+@compute @workgroup_size(8, 8, 1)
+fn advect_dye(@builtin(global_invocation_id) id: vec3<u32>) {
+  let dims = vec2<i32>(i32(sim.gridWidth), i32(sim.gridHeight));
+  let coord = vec2<i32>(id.xy);
+  if (coord.x >= dims.x || coord.y >= dims.y) {
+    return;
+  }
+  let pos = vec2<f32>(coord) + vec2<f32>(0.5, 0.5);
+  let vel = loadTex(texInA, coord, dims).xy;
+  let backPos = pos - sim.dt * vel * vec2<f32>(sim.gridWidth, sim.gridHeight) * 0.25;
+  let advectedDye = sampleBilinear(texInB, backPos, dims).rgb * sim.dyeDissipation;
+  textureStore(texOut, coord, vec4<f32>(max(advectedDye, vec3<f32>(0.0)), 1.0));
+}
+
+@compute @workgroup_size(8, 8, 1)
+fn compute_divergence(@builtin(global_invocation_id) id: vec3<u32>) {
+  let dims = vec2<i32>(i32(sim.gridWidth), i32(sim.gridHeight));
+  let coord = vec2<i32>(id.xy);
+  if (coord.x >= dims.x || coord.y >= dims.y) {
+    return;
+  }
+  let C = loadTex(texInA, coord, dims).xy;
+  var L = loadTex(texInA, coord - vec2<i32>(1, 0), dims).x;
+  var R = loadTex(texInA, coord + vec2<i32>(1, 0), dims).x;
+  var B = loadTex(texInA, coord - vec2<i32>(0, 1), dims).y;
+  var T = loadTex(texInA, coord + vec2<i32>(0, 1), dims).y;
+  if (coord.x == 0) { L = -C.x; }
+  if (coord.x == dims.x - 1) { R = -C.x; }
+  if (coord.y == 0) { B = -C.y; }
+  if (coord.y == dims.y - 1) { T = -C.y; }
+  let div = 0.5 * ((R - L) + (T - B));
+  textureStore(texOut, coord, vec4<f32>(div, 0.0, 0.0, 1.0));
+}
+
+@compute @workgroup_size(8, 8, 1)
+fn jacobi_pressure(@builtin(global_invocation_id) id: vec3<u32>) {
+  let dims = vec2<i32>(i32(sim.gridWidth), i32(sim.gridHeight));
+  let coord = vec2<i32>(id.xy);
+  if (coord.x >= dims.x || coord.y >= dims.y) {
+    return;
+  }
+  let L = loadTex(texInA, coord - vec2<i32>(1, 0), dims).x;
+  let R = loadTex(texInA, coord + vec2<i32>(1, 0), dims).x;
+  let B = loadTex(texInA, coord - vec2<i32>(0, 1), dims).x;
+  let T = loadTex(texInA, coord + vec2<i32>(0, 1), dims).x;
+  let div = loadTex(texInB, coord, dims).x;
+  let pressure = (L + R + B + T - div) * 0.25;
+  textureStore(texOut, coord, vec4<f32>(pressure, 0.0, 0.0, 1.0));
+}
+
+@compute @workgroup_size(8, 8, 1)
+fn gradient_subtract(@builtin(global_invocation_id) id: vec3<u32>) {
+  let dims = vec2<i32>(i32(sim.gridWidth), i32(sim.gridHeight));
+  let coord = vec2<i32>(id.xy);
+  if (coord.x >= dims.x || coord.y >= dims.y) {
+    return;
+  }
+  let L = loadTex(texInB, coord - vec2<i32>(1, 0), dims).x;
+  let R = loadTex(texInB, coord + vec2<i32>(1, 0), dims).x;
+  let B = loadTex(texInB, coord - vec2<i32>(0, 1), dims).x;
+  let T = loadTex(texInB, coord + vec2<i32>(0, 1), dims).x;
+  let grad = 0.5 * vec2<f32>(R - L, T - B);
+  let vel = loadTex(texInA, coord, dims).xy - grad;
+  textureStore(texOut, coord, vec4<f32>(vel, 0.0, 1.0));
+}
+
+@compute @workgroup_size(8, 8, 1)
+fn clear_texture(@builtin(global_invocation_id) id: vec3<u32>) {
+  let dims = vec2<i32>(i32(sim.gridWidth), i32(sim.gridHeight));
+  let coord = vec2<i32>(id.xy);
+  if (coord.x >= dims.x || coord.y >= dims.y) {
+    return;
+  }
+  textureStore(texOut, coord, vec4<f32>(0.0, 0.0, 0.0, 1.0));
+}
+
+struct VSOut {
+  @builtin(position) pos: vec4<f32>,
+  @location(0) uv: vec2<f32>,
+};
+
+@vertex
+fn vs_main(@builtin(vertex_index) vid: u32) -> VSOut {
+  var positions = array<vec2<f32>, 6>(
+    vec2<f32>(-1.0, -1.0),
+    vec2<f32>( 1.0, -1.0),
+    vec2<f32>(-1.0,  1.0),
+    vec2<f32>(-1.0,  1.0),
+    vec2<f32>( 1.0, -1.0),
+    vec2<f32>( 1.0,  1.0)
+  );
+  let p = positions[vid];
+  var out: VSOut;
+  out.pos = vec4<f32>(p, 0.0, 1.0);
+  out.uv = p * 0.5 + vec2<f32>(0.5, 0.5);
+  return out;
+}
+
+@group(0) @binding(0) var<uniform> renderSim: SimParams;
+@group(0) @binding(1) var dyeTex: texture_2d<f32>;
+@group(0) @binding(2) var velTex: texture_2d<f32>;
+@group(0) @binding(3) var curlTex: texture_2d<f32>;
+@group(0) @binding(4) var pressTex: texture_2d<f32>;
+@group(0) @binding(5) var linearSampler: sampler;
+
+fn acesToneMap(x: vec3<f32>) -> vec3<f32> {
+  let a = 2.51;
+  let b = 0.03;
+  let c = 2.43;
+  let d = 0.59;
+  let e = 0.14;
+  return clamp((x * (a * x + b)) / (x * (c * x + d) + e), vec3<f32>(0.0), vec3<f32>(1.0));
+}
+
+@fragment
+fn fs_main(in: VSOut) -> @location(0) vec4<f32> {
+  let uv = in.uv;
+  let texel = vec2<f32>(1.0 / renderSim.gridWidth, 1.0 / renderSim.gridHeight);
+  let dyeCenter = textureSampleLevel(dyeTex, linearSampler, uv, 0.0).rgb;
+  let dyeL = textureSampleLevel(dyeTex, linearSampler, uv - vec2<f32>(texel.x * 2.5, 0.0), 0.0).rgb;
+  let dyeR = textureSampleLevel(dyeTex, linearSampler, uv + vec2<f32>(texel.x * 2.5, 0.0), 0.0).rgb;
+  let dyeB = textureSampleLevel(dyeTex, linearSampler, uv - vec2<f32>(0.0, texel.y * 2.5), 0.0).rgb;
+  let dyeT = textureSampleLevel(dyeTex, linearSampler, uv + vec2<f32>(0.0, texel.y * 2.5), 0.0).rgb;
+  let bloom = (dyeL + dyeR + dyeB + dyeT) * 0.25;
+  let vel = textureSampleLevel(velTex, linearSampler, uv, 0.0).xy;
+  let speed = length(vel);
+  let curl = textureSampleLevel(curlTex, linearSampler, uv, 0.0).x;
+  let pressure = textureSampleLevel(pressTex, linearSampler, uv, 0.0).x;
+
+  var color = dyeCenter + bloom * 0.42;
+
+  if (renderSim.velGlow > 0.5 && renderSim.renderMode < 0.5) {
+    let dirColor = vec3<f32>(abs(vel.x), abs(vel.y), max(0.0, -vel.x * vel.y)) * 0.08;
+    let streak = smoothstep(0.0, 1.0, fract(uv.x * 48.0 + vel.x * 0.15) * fract(uv.y * 48.0 + vel.y * 0.15));
+    color = color + dirColor * (0.65 + 0.35 * streak) + vec3<f32>(0.04, 0.12, 0.22) * min(speed * 0.06, 0.65);
+  }
+
+  if (renderSim.renderMode > 0.5 && renderSim.renderMode < 1.5) {
+    let angle = atan2(vel.y, vel.x);
+    let hue = vec3<f32>(
+      0.5 + 0.5 * cos(angle),
+      0.5 + 0.5 * cos(angle + 2.094),
+      0.5 + 0.5 * cos(angle + 4.188)
+    );
+    color = hue * min(speed * 0.28, 1.8);
+  } else if (renderSim.renderMode > 1.5 && renderSim.renderMode < 2.5) {
+    let posCurl = max(0.0, curl) * 0.6;
+    let negCurl = max(0.0, -curl) * 0.6;
+    color = vec3<f32>(posCurl * 1.2, (posCurl + negCurl) * 0.25, negCurl * 1.35);
+  } else if (renderSim.renderMode > 2.5) {
+    let pPos = max(0.0, pressure) * 1.4;
+    let pNeg = max(0.0, -pressure) * 1.4;
+    color = vec3<f32>(pPos, pPos * 0.4 + pNeg * 0.3, pNeg * 1.2);
+  }
+
+  let vignette = 1.0 - 0.28 * dot(uv - 0.5, uv - 0.5);
+  let mapped = acesToneMap(color * vignette + vec3<f32>(0.008, 0.011, 0.02));
+  let gamma = pow(mapped, vec3<f32>(1.0 / 2.1));
+  return vec4<f32>(gamma, 1.0);
+}
+`;
+
+    const canvas = document.getElementById('fluidCanvas');
+    const brushCursor = document.getElementById('brushCursor');
+    const statusBadge = document.getElementById('statusBadge');
+    const statusDot = document.getElementById('statusDot');
+    const adapterInfoText = document.getElementById('adapterInfoText');
+    const fpsValue = document.getElementById('fpsValue');
+    const frametimeValue = document.getElementById('frametimeValue');
+    const interactionModeBadge = document.getElementById('interactionModeBadge');
+    const diagModal = document.getElementById('diagModal');
+    const diagReasonText = document.getElementById('diagReasonText');
+    const toastBanner = document.getElementById('toastBanner');
+    const toastText = document.getElementById('toastText');
+
+    let device = null;
+    let context = null;
+    let canvasFormat = null;
+    let shaderModule = null;
+    let computeBindGroupLayout = null;
+    let renderBindGroupLayout = null;
+    let pipelines = {};
+    let simParamsBuffer = null;
+    let dummySplatBuffer = null;
+    let splatBufferPool = [];
+    const MAX_SPLATS_PER_FRAME = 24;
+    let linearSampler = null;
+    let textures = {};
+    let pendingSplats = [];
+
+    function showToast(message) {
+      toastText.textContent = message;
+      toastBanner.classList.remove('opacity-0', 'translate-y-2');
+      toastBanner.classList.add('opacity-100', 'translate-y-0');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => {
+        toastBanner.classList.remove('opacity-100', 'translate-y-0');
+        toastBanner.classList.add('opacity-0', 'translate-y-2');
+      }, 2400);
+    }
+
+    function showDiagnosticsError(reason) {
+      statusBadge.textContent = 'WEBGPU OFFLINE';
+      statusBadge.className = 'font-mono-tech text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-400/30';
+      statusDot.className = 'absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_10px_#f43f5e]';
+      adapterInfoText.textContent = reason;
+      diagReasonText.textContent = reason;
+      diagModal.classList.remove('hidden');
+      diagModal.classList.add('flex');
+    }
+
+    document.getElementById('copyFlagBtn').addEventListener('click', () => {
+      const tempInput = document.createElement('textarea');
+      tempInput.value = 'edge://flags/#enable-unsafe-webgpu';
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      document.getElementById('copyFlagBtn').textContent = 'Copied!';
+      setTimeout(() => {
+        document.getElementById('copyFlagBtn').textContent = 'Copy URL';
+      }, 1800);
+    });
+
+    function nextPaletteColor() {
+      const palette = COLOR_PRESETS[state.preset] || COLOR_PRESETS.cyber;
+      const base = palette[state.colorIndex % palette.length];
+      state.colorIndex = (state.colorIndex + 1) % palette.length;
+      const jitter = 0.08;
+      return [
+        Math.max(0.05, Math.min(1.5, base[0] + (Math.random() - 0.5) * jitter)) * 1.35,
+        Math.max(0.05, Math.min(1.5, base[1] + (Math.random() - 0.5) * jitter)) * 1.35,
+        Math.max(0.05, Math.min(1.5, base[2] + (Math.random() - 0.5) * jitter)) * 1.35
+      ];
+    }
+
+    function createSimTexture(width, height) {
+      const tex = device.createTexture({
+        size: [width, height, 1],
+        format: 'rgba16float',
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC
+      });
+      return {
+        texture: tex,
+        view: tex.createView()
+      };
+    }
+
+    function createPingPongTextures(width, height) {
+      const a = createSimTexture(width, height);
+      const b = createSimTexture(width, height);
+      return {
+        read: a,
+        write: b,
+        swap() {
+          const temp = this.read;
+          this.read = this.write;
+          this.write = temp;
+        },
+        destroy() {
+          a.texture.destroy();
+          b.texture.destroy();
+        }
+      };
+    }
+
+    function allocateGridTextures(size) {
+      if (textures.velocity) {
+        textures.velocity.destroy();
+        textures.dye.destroy();
+        textures.pressure.destroy();
+        textures.divergence.texture.destroy();
+        textures.curl.texture.destroy();
+      }
+      textures.velocity = createPingPongTextures(size, size);
+      textures.dye = createPingPongTextures(size, size);
+      textures.pressure = createPingPongTextures(size, size);
+      textures.divergence = createSimTexture(size, size);
+      textures.curl = createSimTexture(size, size);
+    }
+
+    function makeComputeBindGroup(texAView, texBView, texOutView, splatBuf = dummySplatBuffer) {
+      return device.createBindGroup({
+        layout: computeBindGroupLayout,
+        entries: [
+          { binding: 0, resource: { buffer: simParamsBuffer } },
+          { binding: 1, resource: texAView },
+          { binding: 2, resource: texBView },
+          { binding: 3, resource: texOutView },
+          { binding: 4, resource: { buffer: splatBuf } }
+        ]
+      });
+    }
+
+    function clearAllFluidTextures() {
+      if (!device) return;
+      const encoder = device.createCommandEncoder();
+      const wg = Math.ceil(state.gridSize / 8);
+      const targets = [
+        textures.velocity.read.view,
+        textures.velocity.write.view,
+        textures.dye.read.view,
+        textures.dye.write.view,
+        textures.pressure.read.view,
+        textures.pressure.write.view,
+        textures.divergence.view,
+        textures.curl.view
+      ];
+      const dummyView = textures.divergence.view;
+      for (const targetView of targets) {
+        const pass = encoder.beginComputePass();
+        pass.setPipeline(pipelines.clear);
+        pass.setBindGroup(0, makeComputeBindGroup(dummyView, dummyView, targetView));
+        pass.dispatchWorkgroups(wg, wg, 1);
+        pass.end();
+      }
+      device.queue.submit([encoder.finish()]);
+    }
+
+    function enqueueRandomBurst(count = 10) {
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2.0 + Math.random() * 0.5;
+        const dist = 0.12 + Math.random() * 0.24;
+        const x = 0.5 + Math.cos(angle) * dist;
+        const y = 0.5 + Math.sin(angle) * dist;
+        const speed = 22.0 + Math.random() * 32.0;
+        const dx = Math.cos(angle) * speed;
+        const dy = Math.sin(angle) * speed;
+        const color = nextPaletteColor();
+        pendingSplats.push({
+          x,
+          y,
+          dx,
+          dy,
+          color,
+          radius: state.brushRadius * (0.9 + Math.random() * 0.6),
+          mode: 0.0
+        });
+      }
+    }
+
+    async function initWebGPU() {
+      if (!window.isSecureContext) {
+        showDiagnosticsError('Insecure Context detected. WebGPU requires HTTPS, localhost, or file:// protocol.');
+        return;
+      }
+      if (!navigator.gpu) {
+        showDiagnosticsError('navigator.gpu is undefined in this browser. Enable edge://flags/#enable-unsafe-webgpu or use a WebGPU-capable Chromium/Edge browser.');
+        return;
+      }
+
+      let adapter = null;
+      try {
+        adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+      } catch (err) {
+        showDiagnosticsError('Failed to request WebGPU adapter: ' + err.message);
+        return;
+      }
+
+      if (!adapter) {
+        showDiagnosticsError('No compatible WebGPU physical adapter found. Verify GPU hardware acceleration is active.');
+        return;
+      }
+
+      try {
+        device = await adapter.requestDevice();
+      } catch (err) {
+        showDiagnosticsError('Failed to create WebGPU logical device: ' + err.message);
+        return;
+      }
+
+      let vendor = 'Generic GPU';
+      let arch = 'WebGPU Compute';
+      let desc = '';
+      if (adapter.info) {
+        vendor = adapter.info.vendor || vendor;
+        arch = adapter.info.architecture || arch;
+        desc = adapter.info.description || adapter.info.device || '';
+      } else if (typeof adapter.requestAdapterInfo === 'function') {
+        try {
+          const info = await adapter.requestAdapterInfo();
+          vendor = info.vendor || vendor;
+          arch = info.architecture || arch;
+          desc = info.description || info.device || '';
+        } catch (_) {}
+      }
+
+      const labelParts = [vendor.toUpperCase(), arch.toUpperCase(), desc].filter(Boolean);
+      adapterInfoText.textContent = `GPU: ${labelParts.join(' // ')}`;
+      statusBadge.textContent = 'ONLINE // WEBGPU COMPUTE';
+
+      context = canvas.getContext('webgpu');
+      canvasFormat = navigator.gpu.getPreferredCanvasFormat();
+
+      resizeCanvas();
+
+      shaderModule = device.createShaderModule({ code: WGSL_SHADERS });
+
+      computeBindGroupLayout = device.createBindGroupLayout({
+        entries: [
+          { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
+          { binding: 1, visibility: GPUShaderStage.COMPUTE, texture: { sampleType: 'float' } },
+          { binding: 2, visibility: GPUShaderStage.COMPUTE, texture: { sampleType: 'float' } },
+          { binding: 3, visibility: GPUShaderStage.COMPUTE, storageTexture: { access: 'write-only', format: 'rgba16float' } },
+          { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } }
+        ]
+      });
+
+      const computePipelineLayout = device.createPipelineLayout({
+        bindGroupLayouts: [computeBindGroupLayout]
+      });
+
+      const computeEntries = [
+        ['splatVelocity', 'splat_velocity'],
+        ['splatDye', 'splat_dye'],
+        ['curl', 'compute_curl'],
+        ['vorticity', 'apply_vorticity'],
+        ['advectVelocity', 'advect_velocity'],
+        ['viscosity', 'viscosity_step'],
+        ['advectDye', 'advect_dye'],
+        ['divergence', 'compute_divergence'],
+        ['jacobi', 'jacobi_pressure'],
+        ['gradientSubtract', 'gradient_subtract'],
+        ['clear', 'clear_texture']
+      ];
+
+      for (const [key, entryPoint] of computeEntries) {
+        pipelines[key] = device.createComputePipeline({
+          layout: computePipelineLayout,
+          compute: { module: shaderModule, entryPoint }
+        });
+      }
+
+      renderBindGroupLayout = device.createBindGroupLayout({
+        entries: [
+          { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+          { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+          { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+          { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+          { binding: 4, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+          { binding: 5, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } }
+        ]
+      });
+
+      pipelines.render = device.createRenderPipeline({
+        layout: device.createPipelineLayout({ bindGroupLayouts: [renderBindGroupLayout] }),
+        vertex: { module: shaderModule, entryPoint: 'vs_main' },
+        fragment: {
+          module: shaderModule,
+          entryPoint: 'fs_main',
+          targets: [{ format: canvasFormat }]
+        },
+        primitive: { topology: 'triangle-list' }
+      });
+
+      simParamsBuffer = device.createBuffer({
+        size: 48,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+      });
+
+      dummySplatBuffer = device.createBuffer({
+        size: 48,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+      });
+
+      for (let i = 0; i < MAX_SPLATS_PER_FRAME; i++) {
+        splatBufferPool.push(
+          device.createBuffer({
+            size: 48,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+          })
+        );
+      }
+
+      linearSampler = device.createSampler({
+        magFilter: 'linear',
+        minFilter: 'linear',
+        addressModeU: 'clamp-to-edge',
+        addressModeV: 'clamp-to-edge'
+      });
+
+      allocateGridTextures(state.gridSize);
+      clearAllFluidTextures();
+      enqueueRandomBurst(12);
+
+      requestAnimationFrame(frameLoop);
+    }
+
+    function resizeCanvas() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const width = Math.max(1, Math.floor(window.innerWidth * dpr));
+      const height = Math.max(1, Math.floor(window.innerHeight * dpr));
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+        if (context && device) {
+          context.configure({
+            device,
+            format: canvasFormat,
+            alphaMode: 'opaque',
+            usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC
+          });
+        }
+      }
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    const pointer = {
+      active: false,
+      rightButton: false,
+      shiftKey: false,
+      x: 0.5,
+      y: 0.5,
+      color: [0.0, 0.96, 0.83]
+    };
+
+    function updateInteractionBadge() {
+      const isVortex = pointer.rightButton || pointer.shiftKey;
+      if (isVortex) {
+        interactionModeBadge.textContent = 'MODE: VORTEX FORCE FIELD';
+        interactionModeBadge.className = 'text-[11px] px-2.5 py-1 rounded-lg bg-pink-500/20 border border-pink-400/40 text-pink-300 font-medium';
+        brushCursor.className = 'border border-pink-400/80 shadow-[0_0_20px_rgba(244,63,94,0.55)]';
+      } else {
+        interactionModeBadge.textContent = 'MODE: DYE IMPULSE';
+        interactionModeBadge.className = 'text-[11px] px-2.5 py-1 rounded-lg bg-sky-500/15 border border-sky-400/30 text-sky-300 font-medium';
+        brushCursor.className = 'border border-sky-400/60 shadow-[0_0_15px_rgba(56,189,248,0.35)]';
+      }
+    }
+
+    function updateBrushCursorVisual(clientX, clientY) {
+      const diameterPx = Math.max(16, state.brushRadius * Math.min(window.innerWidth, window.innerHeight) * 2.2);
+      brushCursor.style.width = `${diameterPx}px`;
+      brushCursor.style.height = `${diameterPx}px`;
+      brushCursor.style.left = `${clientX}px`;
+      brushCursor.style.top = `${clientY}px`;
+    }
+
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    canvas.addEventListener('pointerdown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      pointer.active = true;
+      pointer.rightButton = e.button === 2 || (e.buttons & 2) !== 0;
+      pointer.shiftKey = e.shiftKey;
+      pointer.x = (e.clientX - rect.left) / rect.width;
+      pointer.y = 1.0 - (e.clientY - rect.top) / rect.height;
+      pointer.color = nextPaletteColor();
+      updateInteractionBadge();
+      brushCursor.classList.remove('hidden');
+      updateBrushCursorVisual(e.clientX, e.clientY);
+
+      pendingSplats.push({
+        x: pointer.x,
+        y: pointer.y,
+        dx: (Math.random() - 0.5) * 8.0,
+        dy: (Math.random() - 0.5) * 8.0,
+        color: pointer.color,
+        radius: state.brushRadius,
+        mode: (pointer.rightButton || pointer.shiftKey) ? 1.0 : 0.0
+      });
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+      if (inside) {
+        brushCursor.classList.remove('hidden');
+        updateBrushCursorVisual(e.clientX, e.clientY);
+      } else {
+        brushCursor.classList.add('hidden');
+      }
+
+      pointer.shiftKey = e.shiftKey;
+      updateInteractionBadge();
+
+      if (!pointer.active) return;
+
+      const nx = (e.clientX - rect.left) / rect.width;
+      const ny = 1.0 - (e.clientY - rect.top) / rect.height;
+      const diffX = nx - pointer.x;
+      const diffY = ny - pointer.y;
+      const dist = Math.hypot(diffX, diffY);
+
+      if (dist > 0.0002) {
+        const steps = Math.min(4, Math.max(1, Math.ceil(dist / 0.018)));
+        for (let s = 1; s <= steps; s++) {
+          const t = s / steps;
+          const sx = pointer.x + diffX * t;
+          const sy = pointer.y + diffY * t;
+          pendingSplats.push({
+            x: sx,
+            y: sy,
+            dx: diffX * 520.0,
+            dy: diffY * 520.0,
+            color: pointer.color,
+            radius: state.brushRadius,
+            mode: (pointer.rightButton || pointer.shiftKey) ? 1.0 : 0.0
+          });
+        }
+      } else if (pointer.rightButton || pointer.shiftKey) {
+        pendingSplats.push({
+          x: nx,
+          y: ny,
+          dx: 0.0,
+          dy: 0.0,
+          color: pointer.color,
+          radius: state.brushRadius,
+          mode: 1.0
+        });
+      }
+
+      pointer.x = nx;
+      pointer.y = ny;
+    });
+
+    window.addEventListener('pointerup', () => {
+      pointer.active = false;
+      pointer.rightButton = false;
+      updateInteractionBadge();
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.0025 : -0.0025;
+      state.brushRadius = Math.max(0.005, Math.min(0.080, state.brushRadius + delta));
+      const slider = document.getElementById('brushRadiusSlider');
+      const valSpan = document.getElementById('brushRadiusVal');
+      slider.value = state.brushRadius.toFixed(3);
+      valSpan.textContent = state.brushRadius.toFixed(3);
+      updateBrushCursorVisual(e.clientX, e.clientY);
+    }, { passive: false });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Shift') {
+        pointer.shiftKey = true;
+        updateInteractionBadge();
+      } else if (e.code === 'Space' && document.activeElement.tagName !== 'BUTTON') {
+        e.preventDefault();
+        togglePause();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'Shift') {
+        pointer.shiftKey = false;
+        updateInteractionBadge();
+      }
+    });
+
+    function bindSlider(sliderId, valId, stateKey, decimals = 3, isInt = false) {
+      const slider = document.getElementById(sliderId);
+      const valSpan = document.getElementById(valId);
+      slider.addEventListener('input', () => {
+        const num = isInt ? parseInt(slider.value, 10) : parseFloat(slider.value);
+        state[stateKey] = num;
+        valSpan.textContent = isInt ? String(num) : num.toFixed(decimals);
+      });
+    }
+
+    bindSlider('viscositySlider', 'viscosityVal', 'viscosity', 2, false);
+    bindSlider('dyeDissSlider', 'dyeDissVal', 'dyeDissipation', 3, false);
+    bindSlider('velDissSlider', 'velDissVal', 'velDissipation', 3, false);
+    bindSlider('pressureIterSlider', 'pressureIterVal', 'pressureIterations', 0, true);
+    bindSlider('vorticitySlider', 'vorticityVal', 'vorticity', 1, false);
+    bindSlider('brushRadiusSlider', 'brushRadiusVal', 'brushRadius', 3, false);
+
+    document.getElementById('resetParamsBtn').addEventListener('click', () => {
+      state.viscosity = 0.08;
+      state.dyeDissipation = 0.988;
+      state.velDissipation = 0.992;
+      state.pressureIterations = 30;
+      state.vorticity = 28.0;
+      state.brushRadius = 0.022;
+
+      document.getElementById('viscositySlider').value = '0.08';
+      document.getElementById('viscosityVal').textContent = '0.08';
+      document.getElementById('dyeDissSlider').value = '0.988';
+      document.getElementById('dyeDissVal').textContent = '0.988';
+      document.getElementById('velDissSlider').value = '0.992';
+      document.getElementById('velDissVal').textContent = '0.992';
+      document.getElementById('pressureIterSlider').value = '30';
+      document.getElementById('pressureIterVal').textContent = '30';
+      document.getElementById('vorticitySlider').value = '28.0';
+      document.getElementById('vorticityVal').textContent = '28.0';
+      document.getElementById('brushRadiusSlider').value = '0.022';
+      document.getElementById('brushRadiusVal').textContent = '0.022';
+      showToast('Physics parameters restored to defaults.');
+    });
+
+    document.querySelectorAll('.preset-pill').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.preset-pill').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.preset = btn.dataset.preset;
+        enqueueRandomBurst(6);
+      });
+    });
+
+    document.querySelectorAll('.view-mode-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.view-mode-btn').forEach((b) => {
+          b.className = 'view-mode-btn cyber-btn rounded-lg py-1.5 px-2 bg-slate-900/70 text-slate-300 font-medium';
+        });
+        btn.className = 'view-mode-btn cyber-btn rounded-lg py-1.5 px-2 bg-sky-500/20 border-sky-400/50 text-sky-200 font-medium';
+        state.renderMode = parseFloat(btn.dataset.view);
+      });
+    });
+
+    document.getElementById('velGlowToggle').addEventListener('change', (e) => {
+      state.velGlow = e.target.checked ? 1.0 : 0.0;
+    });
+
+    document.getElementById('gridResSelect').addEventListener('change', (e) => {
+      state.gridSize = parseInt(e.target.value, 10);
+      allocateGridTextures(state.gridSize);
+      clearAllFluidTextures();
+      enqueueRandomBurst(8);
+      showToast(`Simulation grid reallocated to ${state.gridSize}x${state.gridSize}.`);
+    });
+
+    function togglePause() {
+      state.paused = !state.paused;
+      const pauseBtnText = document.getElementById('pauseBtnText');
+      const pauseIndicator = document.getElementById('pauseIndicator');
+      if (state.paused) {
+        pauseBtnText.textContent = 'Resume Sim';
+        pauseIndicator.className = 'w-2 h-2 rounded-full bg-amber-400';
+      } else {
+        pauseBtnText.textContent = 'Pause Sim';
+        pauseIndicator.className = 'w-2 h-2 rounded-full bg-emerald-400';
+      }
+    }
+
+    document.getElementById('pauseBtn').addEventListener('click', togglePause);
+
+    document.getElementById('stepBtn').addEventListener('click', () => {
+      if (!state.paused) {
+        togglePause();
+      }
+      state.stepOnce = true;
+    });
+
+    document.getElementById('randomSplatBtn').addEventListener('click', () => {
+      enqueueRandomBurst(10);
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      clearAllFluidTextures();
+      showToast('Fluid simulation domain cleared.');
+    });
+
+    document.getElementById('snapshotBtn').addEventListener('click', () => {
+      state.captureRequested = true;
+    });
+
+    document.getElementById('collapsePanelBtn').addEventListener('click', () => {
+      const body = document.getElementById('panelBody');
+      const icon = document.getElementById('collapseIcon');
+      body.classList.toggle('hidden');
+      icon.classList.toggle('rotate-180');
+    });
+
+    let lastTime = performance.now();
+    let fpsAccum = 0;
+    let fpsFrames = 0;
+    let lastTelemetryUpdate = performance.now();
+
+    function frameLoop(now) {
+      const rawDt = Math.max(0.001, (now - lastTime) / 1000.0);
+      lastTime = now;
+      const frameMs = rawDt * 1000.0;
+      fpsAccum += rawDt;
+      fpsFrames++;
+
+      if (now - lastTelemetryUpdate >= 250) {
+        const avgFps = Math.round(fpsFrames / fpsAccum);
+        const avgMs = (fpsAccum * 1000.0 / fpsFrames).toFixed(2);
+        fpsValue.textContent = String(avgFps);
+        frametimeValue.textContent = avgMs;
+        fpsAccum = 0;
+        fpsFrames = 0;
+        lastTelemetryUpdate = now;
+      }
+
+      const simDt = Math.min(rawDt, 0.02);
+      const aspectRatio = canvas.width / Math.max(1, canvas.height);
+
+      const simArray = new Float32Array([
+        state.gridSize,
+        state.gridSize,
+        simDt,
+        state.velDissipation,
+        state.dyeDissipation,
+        state.vorticity,
+        state.viscosity,
+        state.renderMode,
+        state.velGlow,
+        now * 0.001,
+        aspectRatio,
+        0.0
+      ]);
+      device.queue.writeBuffer(simParamsBuffer, 0, simArray);
+
+      const wg = Math.ceil(state.gridSize / 8);
+      const dummyView = textures.divergence.view;
+      const encoder = device.createCommandEncoder();
+
+      const activeSplats = pendingSplats.splice(0, MAX_SPLATS_PER_FRAME);
+      for (let i = 0; i < activeSplats.length; i++) {
+        const s = activeSplats[i];
+        const sBuf = splatBufferPool[i];
+        const splatData = new Float32Array([
+          s.x,
+          s.y,
+          s.dx,
+          s.dy,
+          s.color[0],
+          s.color[1],
+          s.color[2],
+          s.radius,
+          s.mode,
+          aspectRatio,
+          0.0,
+          0.0
+        ]);
+        device.queue.writeBuffer(sBuf, 0, splatData);
+
+        const passVel = encoder.beginComputePass();
+        passVel.setPipeline(pipelines.splatVelocity);
+        passVel.setBindGroup(0, makeComputeBindGroup(textures.velocity.read.view, dummyView, textures.velocity.write.view, sBuf));
+        passVel.dispatchWorkgroups(wg, wg, 1);
+        passVel.end();
+        textures.velocity.swap();
+
+        const passDye = encoder.beginComputePass();
+        passDye.setPipeline(pipelines.splatDye);
+        passDye.setBindGroup(0, makeComputeBindGroup(textures.dye.read.view, dummyView, textures.dye.write.view, sBuf));
+        passDye.dispatchWorkgroups(wg, wg, 1);
+        passDye.end();
+        textures.dye.swap();
+      }
+
+      if (!state.paused || state.stepOnce) {
+        state.stepOnce = false;
+
+        const curlPass = encoder.beginComputePass();
+        curlPass.setPipeline(pipelines.curl);
+        curlPass.setBindGroup(0, makeComputeBindGroup(textures.velocity.read.view, dummyView, textures.curl.view));
+        curlPass.dispatchWorkgroups(wg, wg, 1);
+        curlPass.end();
+
+        const vortPass = encoder.beginComputePass();
+        vortPass.setPipeline(pipelines.vorticity);
+        vortPass.setBindGroup(0, makeComputeBindGroup(textures.velocity.read.view, textures.curl.view, textures.velocity.write.view));
+        vortPass.dispatchWorkgroups(wg, wg, 1);
+        vortPass.end();
+        textures.velocity.swap();
+
+        const advVelPass = encoder.beginComputePass();
+        advVelPass.setPipeline(pipelines.advectVelocity);
+        advVelPass.setBindGroup(0, makeComputeBindGroup(textures.velocity.read.view, dummyView, textures.velocity.write.view));
+        advVelPass.dispatchWorkgroups(wg, wg, 1);
+        advVelPass.end();
+        textures.velocity.swap();
+
+        if (state.viscosity > 0.001) {
+          const viscIters = Math.max(2, Math.min(8, Math.ceil(state.viscosity * 8)));
+          for (let v = 0; v < viscIters; v++) {
+            const viscPass = encoder.beginComputePass();
+            viscPass.setPipeline(pipelines.viscosity);
+            viscPass.setBindGroup(0, makeComputeBindGroup(textures.velocity.read.view, dummyView, textures.velocity.write.view));
+            viscPass.dispatchWorkgroups(wg, wg, 1);
+            viscPass.end();
+            textures.velocity.swap();
+          }
+        }
+
+        const divPass = encoder.beginComputePass();
+        divPass.setPipeline(pipelines.divergence);
+        divPass.setBindGroup(0, makeComputeBindGroup(textures.velocity.read.view, dummyView, textures.divergence.view));
+        divPass.dispatchWorkgroups(wg, wg, 1);
+        divPass.end();
+
+        for (let p = 0; p < state.pressureIterations; p++) {
+          const jacobiPass = encoder.beginComputePass();
+          jacobiPass.setPipeline(pipelines.jacobi);
+          jacobiPass.setBindGroup(0, makeComputeBindGroup(textures.pressure.read.view, textures.divergence.view, textures.pressure.write.view));
+          jacobiPass.dispatchWorkgroups(wg, wg, 1);
+          jacobiPass.end();
+          textures.pressure.swap();
+        }
+
+        const gradPass = encoder.beginComputePass();
+        gradPass.setPipeline(pipelines.gradientSubtract);
+        gradPass.setBindGroup(0, makeComputeBindGroup(textures.velocity.read.view, textures.pressure.read.view, textures.velocity.write.view));
+        gradPass.dispatchWorkgroups(wg, wg, 1);
+        gradPass.end();
+        textures.velocity.swap();
+
+        const advDyePass = encoder.beginComputePass();
+        advDyePass.setPipeline(pipelines.advectDye);
+        advDyePass.setBindGroup(0, makeComputeBindGroup(textures.velocity.read.view, textures.dye.read.view, textures.dye.write.view));
+        advDyePass.dispatchWorkgroups(wg, wg, 1);
+        advDyePass.end();
+        textures.dye.swap();
+      }
+
+      const canvasView = context.getCurrentTexture().createView();
+      const renderBindGroup = device.createBindGroup({
+        layout: renderBindGroupLayout,
+        entries: [
+          { binding: 0, resource: { buffer: simParamsBuffer } },
+          { binding: 1, resource: textures.dye.read.view },
+          { binding: 2, resource: textures.velocity.read.view },
+          { binding: 3, resource: textures.curl.view },
+          { binding: 4, resource: textures.pressure.read.view },
+          { binding: 5, resource: linearSampler }
+        ]
+      });
+
+      const renderPass = encoder.beginRenderPass({
+        colorAttachments: [
+          {
+            view: canvasView,
+            clearValue: { r: 0.015, g: 0.02, b: 0.035, a: 1.0 },
+            loadOp: 'clear',
+            storeOp: 'store'
+          }
+        ]
+      });
+      renderPass.setPipeline(pipelines.render);
+      renderPass.setBindGroup(0, renderBindGroup);
+      renderPass.draw(6, 1, 0, 0);
+      renderPass.end();
+
+      device.queue.submit([encoder.finish()]);
+
+      if (state.captureRequested) {
+        state.captureRequested = false;
+        try {
+          const dataUrl = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.download = `aether-fluid-${Date.now()}.png`;
+          link.href = dataUrl;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          showToast('Snapshot saved as lossless PNG.');
+        } catch (err) {
+          showToast('Snapshot export failed: ' + err.message);
+        }
+      }
+
+      requestAnimationFrame(frameLoop);
+    }
+
+    window.addEventListener('load', initWebGPU);
+  </script>
+</body>
+</html>
