@@ -1,0 +1,3032 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LABYRINTH//CORE — Procedural Maze Generation, Pathfinding & Dungeon Map Studio</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            obsidian: {
+              950: '#05070e',
+              900: '#090d18',
+              800: '#0d121e',
+              700: '#161f33',
+              600: '#22304d',
+            },
+            neon: {
+              cyan: '#00f0ff',
+              amber: '#ffb800',
+              emerald: '#00ff9d',
+              rose: '#ff2a6d',
+              purple: '#b537f2',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+    body {
+      background-color: #05070e;
+      color: #e2e8f0;
+      font-family: 'Inter', system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+    .glass-panel {
+      background: rgba(13, 18, 30, 0.88);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(0, 240, 255, 0.14);
+    }
+    .glass-card {
+      background: rgba(8, 12, 22, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+    .cyber-glow-cyan {
+      box-shadow: 0 0 18px rgba(0, 240, 255, 0.22), inset 0 0 8px rgba(0, 240, 255, 0.08);
+    }
+    .cyber-glow-amber {
+      box-shadow: 0 0 18px rgba(255, 184, 0, 0.25), inset 0 0 8px rgba(255, 184, 0, 0.1);
+    }
+    .cyber-glow-emerald {
+      box-shadow: 0 0 18px rgba(0, 255, 157, 0.25), inset 0 0 8px rgba(0, 255, 157, 0.1);
+    }
+    /* Custom Range Sliders */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #161f33;
+      border-radius: 999px;
+      outline: none;
+      border: 1px solid rgba(0, 240, 255, 0.15);
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #00f0ff;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.7);
+      border: 2px solid #05070e;
+      transition: transform 0.12s ease, background-color 0.12s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      background: #38f6ff;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #05070e;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #00f0ff;
+    }
+    .viewport-grid-bg {
+      background-color: #05070e;
+      background-image:
+        radial-gradient(rgba(0, 240, 255, 0.08) 1px, transparent 1px),
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 24px 24px, 48px 48px, 48px 48px;
+    }
+    canvas {
+      image-rendering: auto;
+      touch-action: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen lg:h-screen flex flex-col bg-obsidian-950 text-slate-200 selection:bg-cyan-500 selection:text-slate-950 lg:overflow-hidden">
+
+  <!-- TOP WORKSTATION HEADER -->
+  <header class="glass-panel border-b border-cyan-500/20 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 z-30 shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center cyber-glow-cyan">
+        <svg class="w-5 h-5 text-neon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h7v7H3V3zm11 0h7v7h-7V3zm0 11h7v7h-7v-7zM3 14h7v7H3v-7z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10 6.5h4M6.5 10v4M17.5 10v4M10 17.5h4" />
+        </svg>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-mono font-bold tracking-wider text-sm sm:text-base text-white">
+            LABYRINTH<span class="text-neon-cyan">//</span>CORE
+          </h1>
+          <span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-cyan-500/15 text-neon-cyan border border-cyan-400/30">
+            v4.2 STUDIO
+          </span>
+        </div>
+        <p class="text-[11px] text-slate-400 hidden sm:block">
+          Procedural Maze Generation, Telemetry Pathfinding &amp; Playable Dungeon Cartography
+        </p>
+      </div>
+    </div>
+
+    <!-- Mode Switcher & Quick Actions -->
+    <div class="flex items-center flex-wrap gap-2">
+      <!-- Studio vs Player Mode Toggle -->
+      <div class="inline-flex rounded-lg p-0.5 bg-obsidian-900 border border-slate-800">
+        <button id="modeStudioBtn" type="button" class="px-3 py-1.5 rounded-md text-xs font-mono font-medium transition-all flex items-center gap-1.5 bg-cyan-500/20 text-neon-cyan border border-cyan-400/40 shadow-sm">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+          ARCHITECT STUDIO
+        </button>
+        <button id="modePlayBtn" type="button" class="px-3 py-1.5 rounded-md text-xs font-mono font-medium transition-all flex items-center gap-1.5 text-slate-400 hover:text-white">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          PLAYER EXPLORER
+        </button>
+      </div>
+
+      <!-- Wall Brush Tool Toggle -->
+      <button id="wallBrushBtn" type="button" title="Toggle Interactive Wall Carve/Paint Brush on Canvas" class="px-2.5 py-1.5 rounded-lg text-xs font-mono border border-slate-700/80 bg-obsidian-900/90 text-slate-300 hover:border-cyan-400/50 hover:text-neon-cyan transition flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+        <span id="wallBrushLabel">CARVE WALLS: OFF</span>
+      </button>
+
+      <!-- Audio Mute Toggle -->
+      <button id="soundToggleBtn" type="button" title="Toggle Synthesized Telemetry Audio" class="p-2 rounded-lg border border-slate-700/80 bg-obsidian-900/90 text-neon-cyan hover:border-cyan-400/50 transition">
+        <svg id="soundOnIcon" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+        </svg>
+        <svg id="soundOffIcon" class="w-4 h-4 hidden text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <line x1="23" y1="9" x2="17" y2="15"/>
+          <line x1="17" y1="9" x2="23" y2="15"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE SPLIT LAYOUT -->
+  <div class="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+
+    <!-- LEFT STICKY CONTROLS SIDEBAR -->
+    <aside class="w-full lg:w-[360px] xl:w-[390px] glass-panel border-b lg:border-b-0 lg:border-r border-cyan-500/20 flex flex-col shrink-0 lg:h-full overflow-y-auto">
+      
+      <!-- Sidebar Module Navigation Tabs -->
+      <div class="grid grid-cols-4 gap-1 p-2 bg-obsidian-950/90 border-b border-slate-800/80 sticky top-0 z-20">
+        <button type="button" data-tab="tab-gen" class="sidebar-tab-btn px-2 py-2 rounded-md text-[11px] font-mono font-semibold uppercase tracking-wider transition flex flex-col items-center gap-1 bg-cyan-500/15 text-neon-cyan border border-cyan-400/40">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <path d="M3 9h18M9 21V9"/>
+          </svg>
+          1.GEN
+        </button>
+        <button type="button" data-tab="tab-solve" class="sidebar-tab-btn px-2 py-2 rounded-md text-[11px] font-mono font-semibold uppercase tracking-wider transition flex flex-col items-center gap-1 text-slate-400 hover:text-white border border-transparent">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="6" cy="6" r="3"/>
+            <circle cx="18" cy="18" r="3"/>
+            <path d="M8.59 8.59L15.42 15.42"/>
+          </svg>
+          2.SOLVE
+        </button>
+        <button type="button" data-tab="tab-play" class="sidebar-tab-btn px-2 py-2 rounded-md text-[11px] font-mono font-semibold uppercase tracking-wider transition flex flex-col items-center gap-1 text-slate-400 hover:text-white border border-transparent">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polygon points="10 8 16 12 10 16 10 8"/>
+          </svg>
+          3.PLAY
+        </button>
+        <button type="button" data-tab="tab-export" class="sidebar-tab-btn px-2 py-2 rounded-md text-[11px] font-mono font-semibold uppercase tracking-wider transition flex flex-col items-center gap-1 text-slate-400 hover:text-white border border-transparent">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          4.EXPORT
+        </button>
+      </div>
+
+      <!-- Sidebar Content Container -->
+      <div class="p-4 space-y-5 flex-1">
+
+        <!-- ================= MODULE 1: PROCEDURAL MAZE GENERATION ================= -->
+        <section id="tab-gen" class="sidebar-section space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-mono uppercase tracking-widest text-neon-cyan flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-neon-cyan animate-pulse"></span>
+              Maze Generation Engine
+            </h2>
+            <span id="genStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-neon-emerald border border-emerald-500/30">
+              READY
+            </span>
+          </div>
+
+          <!-- Algorithm Selector -->
+          <div class="space-y-1.5">
+            <label for="genAlgoSelect" class="block text-xs font-medium text-slate-300">
+              Generation Algorithm
+            </label>
+            <select id="genAlgoSelect" class="w-full rounded-lg bg-obsidian-900 border border-slate-700 px-3 py-2 text-xs font-mono text-white focus:border-neon-cyan focus:outline-none">
+              <option value="dfs">Recursive Backtracker (DFS)</option>
+              <option value="kruskal">Kruskal's Algorithm (Randomized Tree)</option>
+              <option value="prim">Prim's Algorithm (Modified Radial)</option>
+              <option value="cellular">Cellular Automata (Organic Cave Mode)</option>
+            </select>
+            <p id="genAlgoDesc" class="text-[11px] text-slate-400 leading-relaxed bg-obsidian-900/60 p-2 rounded border border-slate-800">
+              High river/winding factor with long winding corridors and minimal dead ends.
+            </p>
+          </div>
+
+          <!-- Grid Dimensions (10x10 to 100x100) -->
+          <div class="glass-card p-3 rounded-xl space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-slate-300">Grid Dimensions</span>
+              <div class="flex items-center gap-1">
+                <button type="button" data-preset="15,15" class="dim-preset-btn text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-500/20 hover:text-neon-cyan text-slate-300 transition">15×15</button>
+                <button type="button" data-preset="25,25" class="dim-preset-btn text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-500/20 hover:text-neon-cyan text-slate-300 transition">25×25</button>
+                <button type="button" data-preset="45,35" class="dim-preset-btn text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-500/20 hover:text-neon-cyan text-slate-300 transition">45×35</button>
+                <button type="button" data-preset="75,55" class="dim-preset-btn text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-500/20 hover:text-neon-cyan text-slate-300 transition">75×55</button>
+                <button type="button" data-preset="100,100" class="dim-preset-btn text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-500/20 hover:text-neon-cyan text-slate-300 transition">100²</button>
+              </div>
+            </div>
+
+            <!-- Width Slider -->
+            <div>
+              <div class="flex justify-between text-xs font-mono mb-1">
+                <span class="text-slate-400">COLUMNS (WIDTH)</span>
+                <span id="gridWidthVal" class="text-neon-cyan font-semibold">25</span>
+              </div>
+              <input id="gridWidthSlider" type="range" min="10" max="100" value="25" />
+            </div>
+
+            <!-- Height Slider -->
+            <div>
+              <div class="flex justify-between text-xs font-mono mb-1">
+                <span class="text-slate-400">ROWS (HEIGHT)</span>
+                <span id="gridHeightVal" class="text-neon-cyan font-semibold">25</span>
+              </div>
+              <input id="gridHeightSlider" type="range" min="10" max="100" value="25" />
+            </div>
+          </div>
+
+          <!-- Cell Size, Wall Thickness & Auto-Fit Scaling -->
+          <div class="glass-card p-3 rounded-xl space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-slate-300">Geometry &amp; Scaling</span>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                <input id="autoFitToggle" type="checkbox" checked class="rounded bg-obsidian-900 border-slate-700 text-cyan-500 focus:ring-0" />
+                <span class="text-[11px] font-mono text-neon-cyan">AUTO-FIT VIEW</span>
+              </label>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-mono mb-1">
+                <span class="text-slate-400">CELL SIZE (PX)</span>
+                <span id="cellSizeVal" class="text-neon-cyan font-semibold">AUTO (24px)</span>
+              </div>
+              <input id="cellSizeSlider" type="range" min="6" max="48" value="24" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-mono mb-1">
+                <span class="text-slate-400">WALL THICKNESS</span>
+                <span id="wallThicknessVal" class="text-neon-cyan font-semibold">2.0 px</span>
+              </div>
+              <input id="wallThicknessSlider" type="range" min="1" max="8" step="0.5" value="2" />
+            </div>
+          </div>
+
+          <!-- Animation Controls -->
+          <div class="glass-card p-3 rounded-xl space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-slate-300">Step-by-Step Generation</span>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                <input id="animateGenToggle" type="checkbox" class="rounded bg-obsidian-900 border-slate-700 text-cyan-500 focus:ring-0" />
+                <span class="text-[11px] font-mono text-amber-400">ANIMATED</span>
+              </label>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-mono mb-1">
+                <span class="text-slate-400">ANIMATION SPEED</span>
+                <span id="genSpeedVal" class="text-amber-400 font-semibold">65%</span>
+              </div>
+              <input id="genSpeedSlider" type="range" min="1" max="100" value="65" />
+            </div>
+          </div>
+
+          <!-- Generation Action Buttons -->
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button id="generateMazeBtn" type="button" class="col-span-2 py-2.5 px-4 rounded-xl font-mono font-bold text-xs uppercase tracking-wider bg-gradient-to-r from-cyan-500 to-teal-400 text-slate-950 hover:brightness-110 transition shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+              </svg>
+              GENERATE NEW LABYRINTH
+            </button>
+            <button id="braidMazeBtn" type="button" title="Remove 25% of Dead Ends to Create Multi-Path Loops" class="py-2 px-3 rounded-lg font-mono text-[11px] bg-obsidian-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition flex items-center justify-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-neon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+              </svg>
+              BRAID LOOPS
+            </button>
+            <button id="clearGridBtn" type="button" title="Open All Internal Corridors" class="py-2 px-3 rounded-lg font-mono text-[11px] bg-obsidian-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition flex items-center justify-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+              </svg>
+              OPEN ARENA
+            </button>
+          </div>
+        </section>
+
+        <!-- ================= MODULE 2: PATHFINDING & SOLVING VISUALIZER ================= -->
+        <section id="tab-solve" class="sidebar-section space-y-4 hidden">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-mono uppercase tracking-widest text-neon-amber flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-neon-amber animate-pulse"></span>
+              Pathfinding Visualizer
+            </h2>
+            <span id="solveStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-neon-amber border border-amber-500/30">
+              STANDBY
+            </span>
+          </div>
+
+          <!-- Solver Algorithm Selector -->
+          <div class="space-y-1.5">
+            <label for="solveAlgoSelect" class="block text-xs font-medium text-slate-300">
+              Pathfinding / Traversal Algorithm
+            </label>
+            <select id="solveAlgoSelect" class="w-full rounded-lg bg-obsidian-900 border border-slate-700 px-3 py-2 text-xs font-mono text-white focus:border-neon-amber focus:outline-none">
+              <option value="astar">A* (A-Star) Heuristic Search</option>
+              <option value="dijkstra">Dijkstra's Algorithm / Uniform BFS</option>
+              <option value="wall_right">Wall Follower (Right-Hand Rule)</option>
+              <option value="wall_left">Wall Follower (Left-Hand Rule)</option>
+            </select>
+            <p id="solveAlgoDesc" class="text-[11px] text-slate-400 leading-relaxed bg-obsidian-900/60 p-2 rounded border border-slate-800">
+              Optimal heuristic-guided search prioritizing nodes closest to the Target beacon.
+            </p>
+          </div>
+
+          <!-- A* Heuristic Distance Selector -->
+          <div id="heuristicGroup" class="glass-card p-3 rounded-xl space-y-2">
+            <span class="block text-xs font-medium text-slate-300">A* Distance Heuristic</span>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" data-heuristic="manhattan" class="heuristic-btn py-1.5 px-2 rounded-lg text-xs font-mono bg-amber-500/20 text-neon-amber border border-amber-400/40">
+                MANHATTAN (L1)
+              </button>
+              <button type="button" data-heuristic="euclidean" class="heuristic-btn py-1.5 px-2 rounded-lg text-xs font-mono bg-obsidian-900 text-slate-400 border border-slate-700 hover:text-white">
+                EUCLIDEAN (L2)
+              </button>
+            </div>
+          </div>
+
+          <!-- Solver Speed & Animation -->
+          <div class="glass-card p-3 rounded-xl space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-slate-300">Telemetry Visualization</span>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                <input id="animateSolveToggle" type="checkbox" checked class="rounded bg-obsidian-900 border-slate-700 text-amber-500 focus:ring-0" />
+                <span class="text-[11px] font-mono text-neon-amber">LIVE FRONTIER</span>
+              </label>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-mono mb-1">
+                <span class="text-slate-400">SOLVER SPEED</span>
+                <span id="solveSpeedVal" class="text-neon-amber font-semibold">70%</span>
+              </div>
+              <input id="solveSpeedSlider" type="range" min="1" max="100" value="70" />
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-xs text-slate-400">Show Distance Heatmap</span>
+              <input id="showHeatmapToggle" type="checkbox" checked class="rounded bg-obsidian-900 border-slate-700 text-cyan-500 focus:ring-0" />
+            </div>
+          </div>
+
+          <!-- Anchor Coordinates & Drag Instructions -->
+          <div class="glass-card p-3 rounded-xl space-y-2">
+            <div class="text-[11px] font-mono text-slate-400 flex items-center justify-between">
+              <span>ANCHOR BEACONS (DRAG ON CANVAS)</span>
+              <button id="randomizeAnchorsBtn" type="button" class="text-neon-cyan hover:underline">RANDOMIZE</button>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+              <div class="p-2 rounded bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between">
+                <span class="text-emerald-300 flex items-center gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-neon-emerald"></span>START
+                </span>
+                <span id="startCoordLabel" class="text-white font-semibold">(0, 0)</span>
+              </div>
+              <div class="p-2 rounded bg-rose-500/10 border border-rose-500/30 flex items-center justify-between">
+                <span class="text-rose-300 flex items-center gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-neon-rose"></span>EXIT
+                </span>
+                <span id="targetCoordLabel" class="text-white font-semibold">(24, 24)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Solver Action Buttons -->
+          <div class="grid grid-cols-2 gap-2">
+            <button id="runSolverBtn" type="button" class="col-span-2 py-2.5 px-4 rounded-xl font-mono font-bold text-xs uppercase tracking-wider bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 hover:brightness-110 transition shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              EXECUTE PATHFINDER
+            </button>
+            <button id="stepSolverBtn" type="button" class="py-2 px-3 rounded-lg font-mono text-[11px] bg-obsidian-900 hover:bg-slate-800 text-slate-200 border border-slate-700 transition">
+              STEP +1 FRAME
+            </button>
+            <button id="clearSolutionBtn" type="button" class="py-2 px-3 rounded-lg font-mono text-[11px] bg-obsidian-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition">
+              CLEAR TRACE
+            </button>
+          </div>
+
+          <!-- Legend -->
+          <div class="grid grid-cols-3 gap-1.5 pt-1 text-[10px] font-mono text-slate-300">
+            <div class="flex items-center gap-1.5 bg-obsidian-900/70 p-1.5 rounded border border-slate-800">
+              <span class="w-2.5 h-2.5 rounded-sm bg-cyan-500/50 border border-cyan-400"></span>
+              <span>Visited</span>
+            </div>
+            <div class="flex items-center gap-1.5 bg-obsidian-900/70 p-1.5 rounded border border-slate-800">
+              <span class="w-2.5 h-2.5 rounded-sm bg-amber-400"></span>
+              <span>Frontier</span>
+            </div>
+            <div class="flex items-center gap-1.5 bg-obsidian-900/70 p-1.5 rounded border border-slate-800">
+              <span class="w-2.5 h-2.5 rounded-sm bg-emerald-400"></span>
+              <span>Shortest</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= MODULE 3: INTERACTIVE PLAY & DUNGEON EXPLORATION ================= -->
+        <section id="tab-play" class="sidebar-section space-y-4 hidden">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-mono uppercase tracking-widest text-neon-emerald flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-neon-emerald animate-pulse"></span>
+              Dungeon Explorer Mode
+            </h2>
+            <span id="playStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-neon-emerald border border-emerald-500/30">
+              INACTIVE
+            </span>
+          </div>
+
+          <!-- Player Mode Master Toggle Button -->
+          <button id="togglePlayModeMainBtn" type="button" class="w-full py-2.5 px-4 rounded-xl font-mono font-bold text-xs uppercase tracking-wider bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 hover:brightness-110 transition shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+            <span id="togglePlayModeMainText">LAUNCH PLAYER MODE</span>
+          </button>
+
+          <!-- Fog of War & Dynamic Lighting Settings -->
+          <div class="glass-card p-3 rounded-xl space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="block text-xs font-medium text-slate-200">Fog of War (Dynamic Torch)</span>
+                <span class="text-[11px] text-slate-400">Hide unexplored rooms outside radius</span>
+              </div>
+              <input id="fogOfWarToggle" type="checkbox" class="w-4 h-4 rounded bg-obsidian-900 border-slate-700 text-emerald-500 focus:ring-0" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-mono mb-1">
+                <span class="text-slate-400">TORCH VISION RADIUS</span>
+                <span id="fogRadiusVal" class="text-neon-emerald font-semibold">5 CELLS</span>
+              </div>
+              <input id="fogRadiusSlider" type="range" min="2" max="14" value="5" />
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-xs text-slate-400">Remember Explored Breadcrumbs</span>
+              <input id="breadcrumbsToggle" type="checkbox" checked class="rounded bg-obsidian-900 border-slate-700 text-emerald-500 focus:ring-0" />
+            </div>
+          </div>
+
+          <!-- Live Stopwatch & Player Telemetry -->
+          <div class="glass-card p-3 rounded-xl space-y-2">
+            <div class="text-[11px] font-mono text-slate-400 uppercase">Explorer Bio-Telemetry</div>
+            <div class="grid grid-cols-2 gap-2 font-mono">
+              <div class="bg-obsidian-950 p-2.5 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-400">ELAPSED TIME</div>
+                <div id="playTimerDisplay" class="text-base font-bold text-neon-emerald">00:00.0</div>
+              </div>
+              <div class="bg-obsidian-950 p-2.5 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-400">PLAYER STEPS</div>
+                <div id="playStepsDisplay" class="text-base font-bold text-neon-cyan">0</div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-xs font-mono pt-1 px-1">
+              <span class="text-slate-400">CURRENT POSITION:</span>
+              <span id="playerPosDisplay" class="text-white">(0, 0)</span>
+            </div>
+          </div>
+
+          <!-- On-Screen Tactile D-Pad Controller (For Touch & Mouse + WASD Indicator) -->
+          <div class="glass-card p-3 rounded-xl space-y-2">
+            <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
+              <span>NAVIGATION CONTROLS</span>
+              <span>WASD / ARROWS</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 max-w-[180px] mx-auto py-1">
+              <div></div>
+              <button type="button" data-move="N" class="dpad-btn py-2.5 rounded-lg bg-obsidian-900 hover:bg-cyan-500/20 active:scale-95 border border-slate-700 hover:border-cyan-400 text-slate-200 font-mono text-xs font-bold flex items-center justify-center transition">
+                ▲ W
+              </button>
+              <div></div>
+              <button type="button" data-move="W" class="dpad-btn py-2.5 rounded-lg bg-obsidian-900 hover:bg-cyan-500/20 active:scale-95 border border-slate-700 hover:border-cyan-400 text-slate-200 font-mono text-xs font-bold flex items-center justify-center transition">
+                ◄ A
+              </button>
+              <button id="resetPlayerBtn" type="button" title="Reset Player to Start" class="py-2.5 rounded-lg bg-obsidian-950 hover:bg-rose-500/20 border border-slate-800 text-rose-400 font-mono text-[10px] font-bold flex items-center justify-center transition">
+                RST
+              </button>
+              <button type="button" data-move="E" class="dpad-btn py-2.5 rounded-lg bg-obsidian-900 hover:bg-cyan-500/20 active:scale-95 border border-slate-700 hover:border-cyan-400 text-slate-200 font-mono text-xs font-bold flex items-center justify-center transition">
+                D ►
+              </button>
+              <div></div>
+              <button type="button" data-move="S" class="dpad-btn py-2.5 rounded-lg bg-obsidian-900 hover:bg-cyan-500/20 active:scale-95 border border-slate-700 hover:border-cyan-400 text-slate-200 font-mono text-xs font-bold flex items-center justify-center transition">
+                ▼ S
+              </button>
+              <div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= MODULE 4: THEME CUSTOMIZER & EXPORT DOCK ================= -->
+        <section id="tab-export" class="sidebar-section space-y-4 hidden">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-mono uppercase tracking-widest text-purple-400 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
+              Theme &amp; Multi-Format Export
+            </h2>
+          </div>
+
+          <!-- Visual Theme Selector -->
+          <div class="space-y-2">
+            <span class="block text-xs font-medium text-slate-300">Cartography Visual Theme</span>
+            <div class="grid grid-cols-1 gap-2">
+              <button type="button" data-theme="cyberpunk" class="theme-card-btn p-2.5 rounded-xl border border-cyan-400/60 bg-obsidian-900/90 flex items-center justify-between text-left transition">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-lg bg-[#05070e] border border-[#ffb800] flex items-center justify-center">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#00f0ff]"></span>
+                  </div>
+                  <div>
+                    <div class="text-xs font-mono font-bold text-white">Cyberpunk Terminal</div>
+                    <div class="text-[10px] text-slate-400">Obsidian #05070e, neon cyan &amp; amber walls</div>
+                  </div>
+                </div>
+                <span class="text-[10px] font-mono text-neon-cyan">ACTIVE</span>
+              </button>
+
+              <button type="button" data-theme="blueprint" class="theme-card-btn p-2.5 rounded-xl border border-slate-800 bg-obsidian-900/50 hover:border-slate-600 flex items-center justify-between text-left transition">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-lg bg-[#0a365c] border border-white flex items-center justify-center">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#38bdf8]"></span>
+                  </div>
+                  <div>
+                    <div class="text-xs font-mono font-bold text-white">Blueprint Architecture</div>
+                    <div class="text-[10px] text-slate-400">Drafting cyan grid, crisp chalk-white lines</div>
+                  </div>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">SELECT</span>
+              </button>
+
+              <button type="button" data-theme="parchment" class="theme-card-btn p-2.5 rounded-xl border border-slate-800 bg-obsidian-900/50 hover:border-slate-600 flex items-center justify-between text-left transition">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-lg bg-[#ead7b7] border border-[#3e2723] flex items-center justify-center">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#b45309]"></span>
+                  </div>
+                  <div>
+                    <div class="text-xs font-mono font-bold text-white">Dungeon Parchment</div>
+                    <div class="text-[10px] text-slate-400">Antique vellum surface, dark sepia stone walls</div>
+                  </div>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">SELECT</span>
+              </button>
+
+              <button type="button" data-theme="monochrome" class="theme-card-btn p-2.5 rounded-xl border border-slate-800 bg-obsidian-900/50 hover:border-slate-600 flex items-center justify-between text-left transition">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-lg bg-white border border-black flex items-center justify-center">
+                    <span class="w-2.5 h-2.5 rounded-full bg-black"></span>
+                  </div>
+                  <div>
+                    <div class="text-xs font-mono font-bold text-white">Minimalist Monochrome</div>
+                    <div class="text-[10px] text-slate-400">Pure white background, 1px black printable walls</div>
+                  </div>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">SELECT</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Multi-Format Export Dock -->
+          <div class="glass-card p-3 rounded-xl space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-slate-200">Production Export Dock</span>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer" title="Render PNG at 300 DPI print scale (4x super-sampled resolution)">
+                <input id="dpi300Toggle" type="checkbox" checked class="rounded bg-obsidian-900 border-slate-700 text-cyan-500 focus:ring-0" />
+                <span class="text-[10px] font-mono text-neon-cyan">300 DPI PRINT SCALE</span>
+              </label>
+            </div>
+
+            <div class="space-y-2">
+              <button id="exportPngBtn" type="button" class="w-full py-2 px-3 rounded-lg font-mono text-xs font-semibold bg-cyan-500/15 hover:bg-cyan-500/25 text-neon-cyan border border-cyan-500/30 transition flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                  Export High-Res PNG
+                </span>
+                <span class="text-[10px] opacity-80">.PNG</span>
+              </button>
+
+              <button id="exportSvgBtn" type="button" class="w-full py-2 px-3 rounded-lg font-mono text-xs font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-neon-amber border border-amber-500/30 transition flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                    <polyline points="2 17 12 22 22 17"/>
+                    <polyline points="2 12 12 17 22 12"/>
+                  </svg>
+                  Export Vector SVG Paths
+                </span>
+                <span class="text-[10px] opacity-80">.SVG</span>
+              </button>
+
+              <button id="exportJsonBtn" type="button" class="w-full py-2 px-3 rounded-lg font-mono text-xs font-semibold bg-emerald-500/15 hover:bg-emerald-500/25 text-neon-emerald border border-emerald-500/30 transition flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="16 18 22 12 16 6"/>
+                    <polyline points="8 6 2 12 8 18"/>
+                  </svg>
+                  Export 2D Tilemap JSON
+                </span>
+                <span class="text-[10px] opacity-80">.JSON</span>
+              </button>
+
+              <button id="inspectJsonModalBtn" type="button" class="w-full py-1.5 px-3 rounded-lg font-mono text-[11px] bg-obsidian-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition">
+                Inspect / Copy Tilemap Matrix
+              </button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Bottom Quick-Tip Footer inside Sidebar -->
+      <div class="p-3 border-t border-slate-800/80 bg-obsidian-950/80 text-[11px] font-mono text-slate-400 flex items-center justify-between">
+        <span id="cursorCellHud">CURSOR: --</span>
+        <span id="fpsHud" class="text-neon-cyan">60 FPS</span>
+      </div>
+    </aside>
+
+    <!-- CENTER HIGH-RESOLUTION RESPONSIVE CANVAS VIEWPORT -->
+    <main class="flex-1 flex flex-col relative viewport-grid-bg min-h-[480px] lg:min-h-0 overflow-hidden">
+
+      <!-- FLOATING TOP TELEMETRY HUD BAR -->
+      <div class="p-3 flex flex-wrap items-center justify-between gap-2 z-20 pointer-events-none">
+        <div class="glass-panel px-3 py-2 rounded-xl flex flex-wrap items-center gap-4 pointer-events-auto shadow-xl">
+          <div>
+            <div class="text-[10px] font-mono uppercase text-slate-400">GRID MATRIX</div>
+            <div id="hudGridDims" class="text-xs sm:text-sm font-mono font-bold text-white">25 × 25 <span class="text-slate-500">(625)</span></div>
+          </div>
+          <div class="h-6 w-px bg-slate-800"></div>
+          <div>
+            <div class="text-[10px] font-mono uppercase text-slate-400">EXPLORED NODES</div>
+            <div id="hudExplored" class="text-xs sm:text-sm font-mono font-bold text-neon-cyan">0 <span class="text-[10px] text-slate-400">(0%)</span></div>
+          </div>
+          <div class="h-6 w-px bg-slate-800"></div>
+          <div>
+            <div class="text-[10px] font-mono uppercase text-slate-400">SHORTEST PATH</div>
+            <div id="hudPathLen" class="text-xs sm:text-sm font-mono font-bold text-neon-emerald">--</div>
+          </div>
+          <div class="h-6 w-px bg-slate-800"></div>
+          <div>
+            <div class="text-[10px] font-mono uppercase text-slate-400">STEP COUNT</div>
+            <div id="hudSteps" class="text-xs sm:text-sm font-mono font-bold text-neon-amber">0</div>
+          </div>
+          <div class="h-6 w-px bg-slate-800"></div>
+          <div>
+            <div class="text-[10px] font-mono uppercase text-slate-400">EXEC TIME</div>
+            <div id="hudExecTime" class="text-xs sm:text-sm font-mono font-bold text-purple-400">0.00 ms</div>
+          </div>
+        </div>
+
+        <!-- Floating Quick Action Pill Bar -->
+        <div class="glass-panel px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 pointer-events-auto shadow-xl">
+          <button id="quickGenBtn" type="button" class="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-neon-cyan border border-cyan-400/30 font-mono text-xs font-semibold transition">
+            NEW MAZE
+          </button>
+          <button id="quickSolveBtn" type="button" class="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-neon-amber border border-amber-400/30 font-mono text-xs font-semibold transition">
+            SOLVE
+          </button>
+          <button id="quickClearSolveBtn" type="button" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs transition">
+            RESET PATH
+          </button>
+        </div>
+      </div>
+
+      <!-- INTERACTIVE CANVAS CONTAINER -->
+      <div id="canvasViewport" class="flex-1 flex items-center justify-center p-2 sm:p-4 overflow-auto relative">
+        <div class="relative rounded-xl p-2 shadow-2xl border border-slate-800/90 bg-obsidian-950/60 flex items-center justify-center">
+          <canvas id="mazeCanvas" class="rounded-lg block cursor-crosshair"></canvas>
+        </div>
+      </div>
+
+      <!-- BOTTOM FLOATING STATUS & INTERACTION GUIDE -->
+      <div class="px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-400 glass-panel border-t border-cyan-500/15 z-20">
+        <div class="flex items-center gap-3 flex-wrap">
+          <span class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-neon-emerald inline-block"></span>
+            Drag <strong class="text-white">START</strong> or <strong class="text-rose-400">EXIT</strong> beacons directly on grid
+          </span>
+          <span class="hidden md:inline text-slate-600">|</span>
+          <span id="bottomModeHint" class="text-neon-cyan">
+            STUDIO MODE: Configure generation or run real-time pathfinding telemetry
+          </span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span id="deadEndCounter" class="text-slate-400">DEAD ENDS: --</span>
+          <span id="themeIndicator" class="text-purple-400">THEME: CYBERPUNK</span>
+        </div>
+      </div>
+
+      <!-- VICTORY OVERLAY MODAL (PLAYER MODE) -->
+      <div id="victoryModal" class="hidden absolute inset-0 bg-obsidian-950/85 backdrop-blur-md z-40 flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full rounded-2xl p-6 border border-emerald-400/40 cyber-glow-emerald space-y-5 text-center">
+          <div class="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/50 mx-auto flex items-center justify-center">
+            <svg class="w-8 h-8 text-neon-emerald" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </div>
+          <div>
+            <div class="text-xs font-mono uppercase tracking-widest text-neon-emerald">TARGET BEACON REACHED</div>
+            <h3 class="text-2xl font-mono font-bold text-white mt-1">LABYRINTH CONQUERED</h3>
+          </div>
+          <div class="grid grid-cols-3 gap-2 font-mono text-xs">
+            <div class="bg-obsidian-900 p-3 rounded-xl border border-slate-800">
+              <div class="text-[10px] text-slate-400">CLEAR TIME</div>
+              <div id="victoryTimeStat" class="text-sm font-bold text-neon-emerald mt-0.5">00:12.4</div>
+            </div>
+            <div class="bg-obsidian-900 p-3 rounded-xl border border-slate-800">
+              <div class="text-[10px] text-slate-400">STEPS TAKEN</div>
+              <div id="victoryStepsStat" class="text-sm font-bold text-neon-cyan mt-0.5">42</div>
+            </div>
+            <div class="bg-obsidian-900 p-3 rounded-xl border border-slate-800">
+              <div class="text-[10px] text-slate-400">EFFICIENCY</div>
+              <div id="victoryEffStat" class="text-sm font-bold text-neon-amber mt-0.5">96%</div>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2 pt-2">
+            <button id="victoryNewMazeBtn" type="button" class="flex-1 py-2.5 px-4 rounded-xl bg-neon-emerald text-slate-950 font-mono font-bold text-xs uppercase tracking-wider hover:brightness-110 transition">
+              NEW DUNGEON RUN
+            </button>
+            <button id="victoryReplayBtn" type="button" class="py-2.5 px-4 rounded-xl bg-obsidian-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-mono text-xs transition">
+              REPLAY SAME
+            </button>
+            <button id="victoryCloseBtn" type="button" class="py-2.5 px-3 rounded-xl bg-obsidian-900 hover:bg-slate-800 text-slate-400 border border-slate-800 font-mono text-xs transition">
+              CLOSE
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TILEMAP JSON INSPECTOR MODAL -->
+      <div id="jsonModal" class="hidden fixed inset-0 bg-obsidian-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="glass-panel max-w-2xl w-full rounded-2xl p-5 border border-cyan-400/40 space-y-4 flex flex-col max-h-[85vh]">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-mono font-bold text-white">2D TILEMAP JSON MATRIX (`0` = Floor, `1` = Wall)</h3>
+              <p class="text-xs text-slate-400">Ready for Unity, Godot, Phaser, or custom tilemap importers</p>
+            </div>
+            <button id="closeJsonModalBtn" type="button" class="p-1.5 rounded-lg bg-obsidian-900 text-slate-400 hover:text-white border border-slate-800">
+              ✕
+            </button>
+          </div>
+          <textarea id="jsonPreviewArea" readonly class="w-full flex-1 min-h-[280px] rounded-xl bg-obsidian-950 border border-slate-800 p-3 font-mono text-[11px] text-neon-cyan focus:outline-none overflow-auto"></textarea>
+          <div class="flex items-center justify-end gap-2">
+            <button id="copyJsonBtn" type="button" class="py-2 px-4 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-neon-cyan border border-cyan-400/40 font-mono text-xs font-semibold transition">
+              COPY JSON TO CLIPBOARD
+            </button>
+            <button id="downloadJsonFromModalBtn" type="button" class="py-2 px-4 rounded-xl bg-neon-emerald text-slate-950 font-mono text-xs font-bold transition">
+              DOWNLOAD .JSON FILE
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOAST NOTIFICATION -->
+      <div id="toastBanner" class="fixed bottom-12 right-5 z-50 hidden glass-panel px-4 py-2.5 rounded-xl border border-cyan-400/50 text-xs font-mono text-white shadow-2xl flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-neon-cyan"></span>
+        <span id="toastMessage">Action completed</span>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- APPLICATION LOGIC -->
+  <script>
+    (function () {
+      'use strict';
+
+      // =========================================================================
+      // 1. SYNTHESIZED WEB AUDIO TELEMETRY ENGINE (ZERO EXTERNAL ASSETS)
+      // =========================================================================
+      const SoundEngine = {
+        ctx: null,
+        muted: false,
+        init() {
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+              this.ctx = new AudioCtx();
+            }
+          }
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(() => {});
+          }
+        },
+        tone(freq, duration = 0.04, type = 'sine', gainVal = 0.05) {
+          if (this.muted) return;
+          try {
+            this.init();
+            if (!this.ctx) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0008, this.ctx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + duration);
+          } catch (e) {
+            // Ignore audio errors if blocked by browser autoplay policy
+          }
+        },
+        step() {
+          this.tone(320, 0.045, 'triangle', 0.06);
+        },
+        bump() {
+          this.tone(110, 0.08, 'sawtooth', 0.06);
+        },
+        solveComplete() {
+          [523.25, 659.25, 783.99, 1046.5].forEach((f, idx) => {
+            setTimeout(() => this.tone(f, 0.12, 'triangle', 0.07), idx * 55);
+          });
+        },
+        victory() {
+          [440, 554.37, 659.25, 880, 1108.73].forEach((f, idx) => {
+            setTimeout(() => this.tone(f, 0.16, 'sine', 0.09), idx * 70);
+          });
+        }
+      };
+
+      // =========================================================================
+      // 2. THEME DEFINITIONS (4 DISTINCT CARTOGRAPHY PALETTES)
+      // =========================================================================
+      const THEMES = {
+        cyberpunk: {
+          name: 'CYBERPUNK',
+          bg: '#05070e',
+          floor: '#080c17',
+          gridLine: 'rgba(0, 240, 255, 0.05)',
+          wall: '#ffb800',
+          wallGlow: 'rgba(255, 184, 0, 0.35)',
+          solidFill: '#1a1408',
+          visitedNear: 'rgba(0, 240, 255, 0.24)',
+          visitedFar: 'rgba(181, 55, 242, 0.28)',
+          frontier: '#ffb800',
+          path: '#00ff9d',
+          pathGlow: 'rgba(0, 255, 157, 0.65)',
+          genHead: '#ff2a6d',
+          genStack: 'rgba(0, 240, 255, 0.16)',
+          startBeacon: '#00ff9d',
+          targetBeacon: '#ff2a6d',
+          player: '#00f0ff',
+          breadcrumb: 'rgba(0, 240, 255, 0.28)',
+          fogColor: 'rgba(4, 6, 12, 0.96)'
+        },
+        blueprint: {
+          name: 'BLUEPRINT',
+          bg: '#0a365c',
+          floor: '#0d416e',
+          gridLine: 'rgba(240, 248, 255, 0.12)',
+          wall: '#f0f8ff',
+          wallGlow: 'rgba(56, 189, 248, 0.25)',
+          solidFill: '#072642',
+          visitedNear: 'rgba(56, 189, 248, 0.32)',
+          visitedFar: 'rgba(99, 102, 241, 0.32)',
+          frontier: '#facc15',
+          path: '#fde047',
+          pathGlow: 'rgba(253, 224, 71, 0.55)',
+          genHead: '#facc15',
+          genStack: 'rgba(255, 255, 255, 0.18)',
+          startBeacon: '#4ade80',
+          targetBeacon: '#fb7185',
+          player: '#fde047',
+          breadcrumb: 'rgba(253, 224, 71, 0.26)',
+          fogColor: 'rgba(5, 24, 43, 0.95)'
+        },
+        parchment: {
+          name: 'PARCHMENT',
+          bg: '#e8d5b5',
+          floor: '#efe0c4',
+          gridLine: 'rgba(92, 64, 51, 0.12)',
+          wall: '#3b2416',
+          wallGlow: 'rgba(59, 36, 22, 0.0)',
+          solidFill: '#6b4c35',
+          visitedNear: 'rgba(217, 119, 6, 0.22)',
+          visitedFar: 'rgba(180, 83, 9, 0.30)',
+          frontier: '#dc2626',
+          path: '#b45309',
+          pathGlow: 'rgba(180, 83, 9, 0.35)',
+          genHead: '#dc2626',
+          genStack: 'rgba(180, 83, 9, 0.20)',
+          startBeacon: '#15803d',
+          targetBeacon: '#b91c1c',
+          player: '#0369a1',
+          breadcrumb: 'rgba(180, 83, 9, 0.25)',
+          fogColor: 'rgba(28, 19, 13, 0.94)'
+        },
+        monochrome: {
+          name: 'MONOCHROME',
+          bg: '#ffffff',
+          floor: '#ffffff',
+          gridLine: 'rgba(0, 0, 0, 0.06)',
+          wall: '#111111',
+          wallGlow: 'rgba(0, 0, 0, 0)',
+          solidFill: '#222222',
+          visitedNear: 'rgba(148, 163, 184, 0.30)',
+          visitedFar: 'rgba(100, 116, 139, 0.35)',
+          frontier: '#f59e0b',
+          path: '#059669',
+          pathGlow: 'rgba(5, 150, 105, 0.25)',
+          genHead: '#dc2626',
+          genStack: 'rgba(0, 0, 0, 0.12)',
+          startBeacon: '#16a34a',
+          targetBeacon: '#dc2626',
+          player: '#2563eb',
+          breadcrumb: 'rgba(37, 99, 235, 0.22)',
+          fogColor: 'rgba(15, 23, 42, 0.94)'
+        }
+      };
+
+      const GEN_DESCRIPTIONS = {
+        dfs: 'High river/winding factor with long winding corridors and minimal dead ends.',
+        kruskal: 'Uniform spanning tree merging disjoint sets randomly for high branch density.',
+        prim: 'Radial centered expansion carving outward from the core chamber.',
+        cellular: 'Organic cavern formation using cellular birth/survival rules with guaranteed connected chambers.'
+      };
+
+      const SOLVE_DESCRIPTIONS = {
+        astar: 'Optimal heuristic-guided search prioritizing nodes closest to the Target beacon.',
+        dijkstra: 'Uniform-cost wavefront expansion exploring radially to guarantee the shortest path.',
+        wall_right: 'Autonomous robotic right-hand wall-hugging rule with cycle-escape fallback.',
+        wall_left: 'Autonomous robotic left-hand wall-hugging rule with cycle-escape fallback.'
+      };
+
+      // =========================================================================
+      // 3. CENTRAL APPLICATION STATE
+      // =========================================================================
+      const state = {
+        cols: 25,
+        rows: 25,
+        cellSize: 24,
+        wallThickness: 2,
+        autoFit: true,
+
+        genAlgo: 'dfs',
+        animateGen: false,
+        genSpeed: 65,
+        isGenerating: false,
+        genStepper: null,
+        genActiveCell: null,
+        genHighlightSet: new Set(),
+
+        solveAlgo: 'astar',
+        heuristic: 'manhattan',
+        animateSolve: true,
+        solveSpeed: 70,
+        showHeatmap: true,
+        isSolving: false,
+        solveStepper: null,
+
+        // Grid cells: 2D array [r][c] -> { r, c, walls: {N,E,S,W}, solid: bool }
+        grid: [],
+
+        // Beacons
+        start: { r: 0, c: 0 },
+        target: { r: 24, c: 24 },
+        draggingAnchor: null, // 'start' | 'target' | 'wall'
+        wallBrushActive: false,
+        wallBrushMode: null, // true = add wall, false = carve passage
+
+        // Pathfinding telemetry state
+        visitedOrder: [],
+        visitedMap: new Map(), // key "r,c" -> cost/step
+        frontierSet: new Set(), // key "r,c"
+        solutionPath: [], // array of {r, c}
+        robotHeading: 0, // 0=N, 1=E, 2=S, 3=W
+        metrics: {
+          explored: 0,
+          pathLen: 0,
+          steps: 0,
+          execTimeMs: 0,
+          deadEnds: 0
+        },
+
+        // Player Explorer Mode
+        mode: 'studio', // 'studio' | 'play'
+        player: { r: 0, c: 0 },
+        playerSteps: 0,
+        breadcrumbs: new Set(),
+        fogOfWar: false,
+        fogRadius: 5,
+        rememberBreadcrumbs: true,
+        playStartTime: 0,
+        playElapsedMs: 0,
+        playTimerActive: false,
+        playWon: false,
+
+        // Theme & Export
+        themeKey: 'cyberpunk',
+        dpi300: true
+      };
+
+      // =========================================================================
+      // 4. DOM REFERENCES & DOUBLE-BUFFERED CANVAS SETUP
+      // =========================================================================
+      const canvas = document.getElementById('mazeCanvas');
+      const ctx = canvas.getContext('2d', { alpha: false });
+      const offscreenCanvas = document.createElement('canvas');
+      const offCtx = offscreenCanvas.getContext('2d', { alpha: false });
+
+      function showToast(msg) {
+        const banner = document.getElementById('toastBanner');
+        const text = document.getElementById('toastMessage');
+        text.textContent = msg;
+        banner.classList.remove('hidden');
+        clearTimeout(showToast._timer);
+        showToast._timer = setTimeout(() => {
+          banner.classList.add('hidden');
+        }, 2600);
+      }
+
+      // =========================================================================
+      // 5. GRID INITIALIZATION & HELPER FUNCTIONS
+      // =========================================================================
+      function keyOf(r, c) {
+        return r + ',' + c;
+      }
+
+      function inBounds(r, c) {
+        return r >= 0 && r < state.rows && c >= 0 && c < state.cols;
+      }
+
+      function createFreshGrid(allWallsClosed = true) {
+        const g = [];
+        for (let r = 0; r < state.rows; r++) {
+          const row = [];
+          for (let c = 0; c < state.cols; c++) {
+            row.push({
+              r,
+              c,
+              walls: {
+                N: allWallsClosed ? true : r === 0,
+                E: allWallsClosed ? true : c === state.cols - 1,
+                S: allWallsClosed ? true : r === state.rows - 1,
+                W: allWallsClosed ? true : c === 0
+              },
+              solid: false,
+              genVisited: false
+            });
+          }
+          g.push(row);
+        }
+        return g;
+      }
+
+      function removeWallBetween(a, b) {
+        const dr = b.r - a.r;
+        const dc = b.c - a.c;
+        if (dr === -1 && dc === 0) {
+          a.walls.N = false;
+          b.walls.S = false;
+        } else if (dr === 1 && dc === 0) {
+          a.walls.S = false;
+          b.walls.N = false;
+        } else if (dr === 0 && dc === 1) {
+          a.walls.E = false;
+          b.walls.W = false;
+        } else if (dr === 0 && dc === -1) {
+          a.walls.W = false;
+          b.walls.E = false;
+        }
+      }
+
+      function getAccessibleNeighbors(r, c) {
+        if (!inBounds(r, c)) return [];
+        const cell = state.grid[r][c];
+        if (cell.solid) return [];
+        const res = [];
+        if (!cell.walls.N && inBounds(r - 1, c) && !state.grid[r - 1][c].solid) {
+          res.push(state.grid[r - 1][c]);
+        }
+        if (!cell.walls.E && inBounds(r, c + 1) && !state.grid[r][c + 1].solid) {
+          res.push(state.grid[r][c + 1]);
+        }
+        if (!cell.walls.S && inBounds(r + 1, c) && !state.grid[r + 1][c].solid) {
+          res.push(state.grid[r + 1][c]);
+        }
+        if (!cell.walls.W && inBounds(r, c - 1) && !state.grid[r][c - 1].solid) {
+          res.push(state.grid[r][c - 1]);
+        }
+        return res;
+      }
+
+      function countDeadEnds() {
+        let count = 0;
+        for (let r = 0; r < state.rows; r++) {
+          for (let c = 0; c < state.cols; c++) {
+            const cell = state.grid[r][c];
+            if (cell.solid) continue;
+            let openSides = 0;
+            if (!cell.walls.N) openSides++;
+            if (!cell.walls.E) openSides++;
+            if (!cell.walls.S) openSides++;
+            if (!cell.walls.W) openSides++;
+            if (openSides === 1) count++;
+          }
+        }
+        state.metrics.deadEnds = count;
+        document.getElementById('deadEndCounter').textContent = 'DEAD ENDS: ' + count;
+      }
+
+      function ensureValidBeacons() {
+        state.start.r = Math.max(0, Math.min(state.rows - 1, state.start.r));
+        state.start.c = Math.max(0, Math.min(state.cols - 1, state.start.c));
+        state.target.r = Math.max(0, Math.min(state.rows - 1, state.target.r));
+        state.target.c = Math.max(0, Math.min(state.cols - 1, state.target.c));
+
+        // If start or target lands on a solid cell (in Cave Mode), move to nearest open floor cell
+        if (state.grid[state.start.r] && state.grid[state.start.r][state.start.c].solid) {
+          const open = findNearestOpenCell(0, 0);
+          if (open) state.start = open;
+        }
+        if (state.grid[state.target.r] && state.grid[state.target.r][state.target.c].solid) {
+          const open = findNearestOpenCell(state.rows - 1, state.cols - 1);
+          if (open) state.target = open;
+        }
+        if (state.start.r === state.target.r && state.start.c === state.target.c) {
+          state.target = { r: state.rows - 1, c: state.cols - 1 };
+        }
+        updateBeaconLabels();
+      }
+
+      function findNearestOpenCell(startR, startC) {
+        let best = null;
+        let bestDist = Infinity;
+        for (let r = 0; r < state.rows; r++) {
+          for (let c = 0; c < state.cols; c++) {
+            if (!state.grid[r][c].solid) {
+              const d = Math.abs(r - startR) + Math.abs(c - startC);
+              if (d < bestDist) {
+                bestDist = d;
+                best = { r, c };
+              }
+            }
+          }
+        }
+        return best;
+      }
+
+      function updateBeaconLabels() {
+        document.getElementById('startCoordLabel').textContent = `(${state.start.c}, ${state.start.r})`;
+        document.getElementById('targetCoordLabel').textContent = `(${state.target.c}, ${state.target.r})`;
+      }
+
+      // =========================================================================
+      // 6. PROCEDURAL MAZE GENERATION ENGINE (4 ALGORITHMS, STEPPER GENERATOR)
+      // =========================================================================
+      function* createDFSGenerator() {
+        const stack = [];
+        const startCell = state.grid[0][0];
+        startCell.genVisited = true;
+        stack.push(startCell);
+        state.genHighlightSet.add(keyOf(0, 0));
+
+        const dirs = [
+          [-1, 0],
+          [0, 1],
+          [1, 0],
+          [0, -1]
+        ];
+
+        while (stack.length > 0) {
+          const current = stack[stack.length - 1];
+          state.genActiveCell = current;
+
+          const unvisitedNeighbors = [];
+          for (let i = 0; i < 4; i++) {
+            const nr = current.r + dirs[i][0];
+            const nc = current.c + dirs[i][1];
+            if (inBounds(nr, nc) && !state.grid[nr][nc].genVisited) {
+              unvisitedNeighbors.push(state.grid[nr][nc]);
+            }
+          }
+
+          if (unvisitedNeighbors.length > 0) {
+            const next = unvisitedNeighbors[Math.floor(Math.random() * unvisitedNeighbors.length)];
+            removeWallBetween(current, next);
+            next.genVisited = true;
+            stack.push(next);
+            state.genHighlightSet.add(keyOf(next.r, next.c));
+          } else {
+            const popped = stack.pop();
+            state.genHighlightSet.delete(keyOf(popped.r, popped.c));
+          }
+          yield;
+        }
+        state.genActiveCell = null;
+        state.genHighlightSet.clear();
+      }
+
+      function* createKruskalGenerator() {
+        const total = state.rows * state.cols;
+        const parent = new Int32Array(total);
+        const rank = new Int32Array(total);
+        for (let i = 0; i < total; i++) parent[i] = i;
+
+        function find(i) {
+          while (parent[i] !== i) {
+            parent[i] = parent[parent[i]];
+            i = parent[i];
+          }
+          return i;
+        }
+
+        function union(i, j) {
+          const rootI = find(i);
+          const rootJ = find(j);
+          if (rootI === rootJ) return false;
+          if (rank[rootI] < rank[rootJ]) parent[rootI] = rootJ;
+          else if (rank[rootI] > rank[rootJ]) parent[rootJ] = rootI;
+          else {
+            parent[rootJ] = rootI;
+            rank[rootI]++;
+          }
+          return true;
+        }
+
+        const edges = [];
+        for (let r = 0; r < state.rows; r++) {
+          for (let c = 0; c < state.cols; c++) {
+            if (r + 1 < state.rows) edges.push({ r1: r, c1: c, r2: r + 1, c2: c });
+            if (c + 1 < state.cols) edges.push({ r1: r, c1: c, r2: r, c2: c + 1 });
+          }
+        }
+
+        // Fisher-Yates shuffle
+        for (let i = edges.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const tmp = edges[i];
+          edges[i] = edges[j];
+          edges[j] = tmp;
+        }
+
+        for (let i = 0; i < edges.length; i++) {
+          const e = edges[i];
+          const id1 = e.r1 * state.cols + e.c1;
+          const id2 = e.r2 * state.cols + e.c2;
+          if (union(id1, id2)) {
+            const cellA = state.grid[e.r1][e.c1];
+            const cellB = state.grid[e.r2][e.c2];
+            cellA.genVisited = true;
+            cellB.genVisited = true;
+            removeWallBetween(cellA, cellB);
+            state.genActiveCell = cellB;
+            yield;
+          }
+        }
+        state.genActiveCell = null;
+      }
+
+      function* createPrimGenerator() {
+        const centerR = Math.floor(state.rows / 2);
+        const centerC = Math.floor(state.cols / 2);
+        const startCell = state.grid[centerR][centerC];
+        startCell.genVisited = true;
+
+        const frontier = [];
+        const inFrontier = new Set();
+        const dirs = [
+          [-1, 0],
+          [0, 1],
+          [1, 0],
+          [0, -1]
+        ];
+
+        function addFrontier(r, c) {
+          for (let i = 0; i < 4; i++) {
+            const nr = r + dirs[i][0];
+            const nc = c + dirs[i][1];
+            const k = keyOf(nr, nc);
+            if (inBounds(nr, nc) && !state.grid[nr][nc].genVisited && !inFrontier.has(k)) {
+              inFrontier.add(k);
+              frontier.push(state.grid[nr][nc]);
+              state.genHighlightSet.add(k);
+            }
+          }
+        }
+
+        addFrontier(centerR, centerC);
+
+        while (frontier.length > 0) {
+          const randIdx = Math.floor(Math.random() * frontier.length);
+          const current = frontier[randIdx];
+          frontier[randIdx] = frontier[frontier.length - 1];
+          frontier.pop();
+
+          const ck = keyOf(current.r, current.c);
+          inFrontier.delete(ck);
+          state.genHighlightSet.delete(ck);
+
+          const visitedNeighbors = [];
+          for (let i = 0; i < 4; i++) {
+            const nr = current.r + dirs[i][0];
+            const nc = current.c + dirs[i][1];
+            if (inBounds(nr, nc) && state.grid[nr][nc].genVisited) {
+              visitedNeighbors.push(state.grid[nr][nc]);
+            }
+          }
+
+          if (visitedNeighbors.length > 0) {
+            const neighbor = visitedNeighbors[Math.floor(Math.random() * visitedNeighbors.length)];
+            removeWallBetween(current, neighbor);
+            current.genVisited = true;
+            state.genActiveCell = current;
+            addFrontier(current.r, current.c);
+          }
+          yield;
+        }
+        state.genActiveCell = null;
+        state.genHighlightSet.clear();
+      }
+
+      function syncCaveWallsFromSolids() {
+        for (let r = 0; r < state.rows; r++) {
+          for (let c = 0; c < state.cols; c++) {
+            const cell = state.grid[r][c];
+            if (cell.solid) {
+              cell.walls.N = true;
+              cell.walls.E = true;
+              cell.walls.S = true;
+              cell.walls.W = true;
+            } else {
+              cell.walls.N = r === 0 || state.grid[r - 1][c].solid;
+              cell.walls.S = r === state.rows - 1 || state.grid[r + 1][c].solid;
+              cell.walls.W = c === 0 || state.grid[r][c - 1].solid;
+              cell.walls.E = c === state.cols - 1 || state.grid[r][c + 1].solid;
+            }
+          }
+        }
+      }
+
+      function* createCellularCaveGenerator() {
+        // Step 1: Seed initial organic rock density (~42%)
+        for (let r = 0; r < state.rows; r++) {
+          for (let c = 0; c < state.cols; c++) {
+            const isBorder = r === 0 || c === 0 || r === state.rows - 1 || c === state.cols - 1;
+            const isCornerSafe =
+              (r <= 2 && c <= 2) ||
+              (r >= state.rows - 3 && c >= state.cols - 3);
+            state.grid[r][c].solid = isCornerSafe ? false : isBorder ? false : Math.random() < 0.41;
+            state.grid[r][c].genVisited = true;
+          }
+        }
+        syncCaveWallsFromSolids();
+        yield;
+
+        // Step 2: 4 passes of Cellular Automata (4-5 Rule)
+        for (let iter = 0; iter < 4; iter++) {
+          const nextSolid = Array.from({ length: state.rows }, () => new Array(state.cols).fill(false));
+          for (let r = 0; r < state.rows; r++) {
+            for (let c = 0; c < state.cols; c++) {
+              let rockCount = 0;
+              for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                  const nr = r + dr;
+                  const nc = c + dc;
+                  if (!inBounds(nr, nc)) {
+                    rockCount++;
+                  } else if (state.grid[nr][nc].solid) {
+                    rockCount++;
+                  }
+                }
+              }
+              if ((r <= 1 && c <= 1) || (r >= state.rows - 2 && c >= state.cols - 2)) {
+                nextSolid[r][c] = false;
+              } else {
+                nextSolid[r][c] = rockCount >= 5;
+              }
+            }
+          }
+          for (let r = 0; r < state.rows; r++) {
+            for (let c = 0; c < state.cols; c++) {
+              state.grid[r][c].solid = nextSolid[r][c];
+            }
+            state.genActiveCell = state.grid[r][Math.floor(state.cols / 2)];
+            syncCaveWallsFromSolids();
+            yield;
+          }
+        }
+
+        // Step 3: Identify connected floor components & bridge isolated caverns so the dungeon is 100% connected
+        const compId = Array.from({ length: state.rows }, () => new Int32Array(state.cols).fill(-1));
+        const components = [];
+        const dirs = [
+          [-1, 0],
+          [1, 0],
+          [0, -1],
+          [0, 1]
+        ];
+
+        for (let r = 0; r < state.rows; r++) {
+          for (let c = 0; c < state.cols; c++) {
+            if (!state.grid[r][c].solid && compId[r][c] === -1) {
+              const id = components.length;
+              const cells = [];
+              const q = [{ r, c }];
+              compId[r][c] = id;
+              while (q.length > 0) {
+                const cur = q.pop();
+                cells.push(cur);
+                for (let i = 0; i < 4; i++) {
+                  const nr = cur.r + dirs[i][0];
+                  const nc = cur.c + dirs[i][1];
+                  if (inBounds(nr, nc) && !state.grid[nr][nc].solid && compId[nr][nc] === -1) {
+                    compId[nr][nc] = id;
+                    q.push({ r: nr, c: nc });
+                  }
+                }
+              }
+              components.push(cells);
+            }
+          }
+        }
+
+        // Fill tiny 1-3 cell pockets and connect major chambers to component 0
+        if (components.length > 1) {
+          components.sort((a, b) => b.length - a.length);
+          const mainCluster = components[0];
+          for (let idx = 1; idx < components.length; idx++) {
+            const cluster = components[idx];
+            if (cluster.length <= 3) {
+              cluster.forEach((p) => {
+                state.grid[p.r][p.c].solid = true;
+              });
+            } else {
+              // Carve tunnel from cluster[0] to a point in mainCluster
+              const from = cluster[Math.floor(cluster.length / 2)];
+              const to = mainCluster[Math.floor(Math.random() * mainCluster.length)];
+              let cr = from.r;
+              let cc = from.c;
+              while (cr !== to.r || cc !== to.c) {
+                state.grid[cr][cc].solid = false;
+                if (Math.abs(to.r - cr) > Math.abs(to.c - cc)) {
+                  cr += to.r > cr ? 1 : -1;
+                } else {
+                  cc += to.c > cc ? 1 : -1;
+                }
+                state.grid[cr][cc].solid = false;
+              }
+              yield;
+            }
+          }
+        }
+
+        syncCaveWallsFromSolids();
+        state.genActiveCell = null;
+      }
+
+      function startMazeGeneration() {
+        stopActiveOperations();
+        clearPathfindingState();
+
+        state.grid = createFreshGrid(true);
+        state.genHighlightSet.clear();
+        state.genActiveCell = null;
+
+        const genBadge = document.getElementById('genStatusBadge');
+        genBadge.textContent = 'GENERATING...';
+        genBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-neon-amber border border-amber-500/40';
+
+        let generator;
+        if (state.genAlgo === 'dfs') generator = createDFSGenerator();
+        else if (state.genAlgo === 'kruskal') generator = createKruskalGenerator();
+        else if (state.genAlgo === 'prim') generator = createPrimGenerator();
+        else generator = createCellularCaveGenerator();
+
+        const t0 = performance.now();
+
+        if (!state.animateGen) {
+          while (!generator.next().done) {}
+          const elapsed = performance.now() - t0;
+          finishGeneration(elapsed);
+        } else {
+          state.isGenerating = true;
+          state.genStepper = {
+            gen: generator,
+            t0
+          };
+        }
+      }
+
+      function finishGeneration(elapsedMs) {
+        state.isGenerating = false;
+        state.genStepper = null;
+        state.genActiveCell = null;
+        state.genHighlightSet.clear();
+
+        ensureValidBeacons();
+        countDeadEnds();
+        resetPlayerToStart(false);
+
+        state.metrics.execTimeMs = elapsedMs;
+        updateTelemetryHUD();
+
+        const genBadge = document.getElementById('genStatusBadge');
+        genBadge.textContent = 'COMPLETE';
+        genBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-neon-emerald border border-emerald-500/30';
+        SoundEngine.tone(440, 0.06, 'sine', 0.04);
+      }
+
+      function braidMazeLoops() {
+        if (state.isGenerating) return;
+        clearPathfindingState();
+        const dirs = [
+          { key: 'N', dr: -1, dc: 0 },
+          { key: 'E', dr: 0, dc: 1 },
+          { key: 'S', dr: 1, dc: 0 },
+          { key: 'W', dr: 0, dc: -1 }
+        ];
+        let braided = 0;
+        for (let r = 0; r < state.rows; r++) {
+          for (let c = 0; c < state.cols; c++) {
+            const cell = state.grid[r][c];
+            if (cell.solid) continue;
+            const closedDirs = [];
+            let openCount = 0;
+            for (const d of dirs) {
+              if (!cell.walls[d.key]) {
+                openCount++;
+              } else {
+                const nr = r + d.dr;
+                const nc = c + d.dc;
+                if (inBounds(nr, nc) && !state.grid[nr][nc].solid) {
+                  closedDirs.push(state.grid[nr][nc]);
+                }
+              }
+            }
+            if (openCount === 1 && closedDirs.length > 0 && Math.random() < 0.45) {
+              const targetNeighbor = closedDirs[Math.floor(Math.random() * closedDirs.length)];
+              removeWallBetween(cell, targetNeighbor);
+              braided++;
+            }
+          }
+        }
+        countDeadEnds();
+        showToast(`Braided ${braided} dead-end corridors into multi-path loops`);
+        SoundEngine.step();
+      }
+
+      function openArenaGrid() {
+        stopActiveOperations();
+        clearPathfindingState();
+        state.grid = createFreshGrid(false);
+        ensureValidBeacons();
+        countDeadEnds();
+        resetPlayerToStart(false);
+        showToast('Opened all internal corridors (Arena Mode)');
+      }
+
+      // =========================================================================
+      // 7. PATHFINDING & SOLVING VISUALIZER ENGINE (A*, DIJKSTRA/BFS, WALL FOLLOWER)
+      // =========================================================================
+      function clearPathfindingState() {
+        state.isSolving = false;
+        state.solveStepper = null;
+        state.visitedOrder = [];
+        state.visitedMap.clear();
+        state.frontierSet.clear();
+        state.solutionPath = [];
+        state.metrics.explored = 0;
+        state.metrics.pathLen = 0;
+        state.metrics.steps = 0;
+        state.metrics.execTimeMs = 0;
+        updateTelemetryHUD();
+
+        const badge = document.getElementById('solveStatusBadge');
+        badge.textContent = 'STANDBY';
+        badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-neon-amber border border-amber-500/30';
+      }
+
+      function computeHeuristic(r1, c1, r2, c2) {
+        const dr = Math.abs(r1 - r2);
+        const dc = Math.abs(c1 - c2);
+        if (state.heuristic === 'euclidean') {
+          return Math.sqrt(dr * dr + dc * dc);
+        }
+        return dr + dc;
+      }
+
+      function reconstructPath(cameFrom, endKey) {
+        const path = [];
+        let curKey = endKey;
+        while (curKey) {
+          const [r, c] = curKey.split(',').map(Number);
+          path.push({ r, c });
+          curKey = cameFrom.get(curKey);
+        }
+        path.reverse();
+        return path;
+      }
+
+      function* createAStarOrDijkstraGenerator(useHeuristic) {
+        const startKey = keyOf(state.start.r, state.start.c);
+        const targetKey = keyOf(state.target.r, state.target.c);
+
+        const openList = [{ r: state.start.r, c: state.start.c, g: 0, f: 0 }];
+        const cameFrom = new Map();
+        const gScore = new Map();
+        gScore.set(startKey, 0);
+        state.frontierSet.add(startKey);
+
+        let steps = 0;
+
+        while (openList.length > 0) {
+          // Pop node with lowest f score
+          let bestIdx = 0;
+          for (let i = 1; i < openList.length; i++) {
+            if (openList[i].f < openList[bestIdx].f) {
+              bestIdx = i;
+            }
+          }
+          const current = openList[bestIdx];
+          openList.splice(bestIdx, 1);
+
+          const curKey = keyOf(current.r, current.c);
+          state.frontierSet.delete(curKey);
+
+          if (!state.visitedMap.has(curKey)) {
+            state.visitedMap.set(curKey, current.g);
+            state.visitedOrder.push({ r: current.r, c: current.c, cost: current.g });
+          }
+
+          steps++;
+          state.metrics.steps = steps;
+          state.metrics.explored = state.visitedMap.size;
+
+          if (curKey === targetKey) {
+            state.solutionPath = reconstructPath(cameFrom, targetKey);
+            state.metrics.pathLen = state.solutionPath.length;
+            return true;
+          }
+
+          const neighbors = getAccessibleNeighbors(current.r, current.c);
+          for (const nb of neighbors) {
+            const nbKey = keyOf(nb.r, nb.c);
+            const tentativeG = current.g + 1;
+            if (!gScore.has(nbKey) || tentativeG < gScore.get(nbKey)) {
+              cameFrom.set(nbKey, curKey);
+              gScore.set(nbKey, tentativeG);
+              const h = useHeuristic
+                ? computeHeuristic(nb.r, nb.c, state.target.r, state.target.c)
+                : 0;
+              openList.push({ r: nb.r, c: nb.c, g: tentativeG, f: tentativeG + h });
+              if (!state.visitedMap.has(nbKey)) {
+                state.frontierSet.add(nbKey);
+              }
+            }
+          }
+
+          yield;
+        }
+
+        return false;
+      }
+
+      function* createWallFollowerGenerator(isRightHand) {
+        // Headings: 0 = N (-1,0), 1 = E (0,1), 2 = S (1,0), 3 = W (0,-1)
+        const dirMoves = [
+          { dr: -1, dc: 0, wall: 'N' },
+          { dr: 0, dc: 1, wall: 'E' },
+          { dr: 1, dc: 0, wall: 'S' },
+          { dr: 0, dc: -1, wall: 'W' }
+        ];
+
+        let curR = state.start.r;
+        let curC = state.start.c;
+        let heading = 1; // Start facing East
+        const trail = [{ r: curR, c: curC }];
+        const visitedStateSet = new Set();
+
+        const maxSteps = state.rows * state.cols * 8;
+        let steps = 0;
+
+        while (steps < maxSteps) {
+          const curKey = keyOf(curR, curC);
+          state.frontierSet.clear();
+          state.frontierSet.add(curKey);
+
+          if (!state.visitedMap.has(curKey)) {
+            state.visitedMap.set(curKey, steps);
+            state.visitedOrder.push({ r: curR, c: curC, cost: steps });
+          }
+
+          steps++;
+          state.metrics.steps = steps;
+          state.metrics.explored = state.visitedMap.size;
+
+          if (curR === state.target.r && curC === state.target.c) {
+            // Compact loop-free trace from trail for final path visualization
+            state.solutionPath = compactTrailPath(trail);
+            state.metrics.pathLen = state.solutionPath.length;
+            state.frontierSet.clear();
+            return true;
+          }
+
+          const stateSig = `${curR},${curC},${heading}`;
+          if (visitedStateSet.has(stateSig)) {
+            // Cycle detected in a braided/cave room -> fallback to shortest BFS from current position
+            const fallback = findDirectBFSPath(curR, curC, state.target.r, state.target.c);
+            if (fallback.length > 1) {
+              for (let i = 1; i < fallback.length; i++) {
+                const stepNode = fallback[i];
+                trail.push(stepNode);
+                const sk = keyOf(stepNode.r, stepNode.c);
+                state.frontierSet.clear();
+                state.frontierSet.add(sk);
+                state.visitedMap.set(sk, ++steps);
+                state.metrics.steps = steps;
+                state.metrics.explored = state.visitedMap.size;
+                yield;
+              }
+              state.solutionPath = compactTrailPath(trail);
+              state.metrics.pathLen = state.solutionPath.length;
+              state.frontierSet.clear();
+              return true;
+            }
+            break;
+          }
+          visitedStateSet.add(stateSig);
+
+          // Turn order for Right-Hand Rule: Right (+1), Straight (0), Left (+3), Back (+2)
+          // Turn order for Left-Hand Rule: Left (+3), Straight (0), Right (+1), Back (+2)
+          const turnOffsets = isRightHand ? [1, 0, 3, 2] : [3, 0, 1, 2];
+          let moved = false;
+          const cell = state.grid[curR][curC];
+
+          for (const offset of turnOffsets) {
+            const candHeading = (heading + offset) % 4;
+            const move = dirMoves[candHeading];
+            const nr = curR + move.dr;
+            const nc = curC + move.dc;
+            if (!cell.walls[move.wall] && inBounds(nr, nc) && !state.grid[nr][nc].solid) {
+              heading = candHeading;
+              state.robotHeading = heading;
+              curR = nr;
+              curC = nc;
+              trail.push({ r: curR, c: curC });
+              moved = true;
+              break;
+            }
+          }
+
+          if (!moved) break;
+          yield;
+        }
+
+        state.frontierSet.clear();
+        return false;
+      }
+
+      function findDirectBFSPath(sr, sc, tr, tc) {
+        const q = [{ r: sr, c: sc }];
+        const cameFrom = new Map();
+        const startKey = keyOf(sr, sc);
+        const targetKey = keyOf(tr, tc);
+        cameFrom.set(startKey, null);
+
+        while (q.length > 0) {
+          const cur = q.shift();
+          const ck = keyOf(cur.r, cur.c);
+          if (ck === targetKey) {
+            return reconstructPath(cameFrom, targetKey);
+          }
+          for (const nb of getAccessibleNeighbors(cur.r, cur.c)) {
+            const nk = keyOf(nb.r, nb.c);
+            if (!cameFrom.has(nk)) {
+              cameFrom.set(nk, ck);
+              q.push({ r: nb.r, c: nb.c });
+            }
+          }
+        }
+        return [];
+      }
+
+      function compactTrailPath(trail) {
+        // Removes self-intersecting backtracking loops from robot trail
+        const out = [];
+        const indexMap = new Map();
+        for (const pt of trail) {
+          const k = keyOf(pt.r, pt.c);
+          if (indexMap.has(k)) {
+            const prevIdx = indexMap.get(k);
+            while (out.length - 1 > prevIdx) {
+              const removed = out.pop();
+              indexMap.delete(keyOf(removed.r, removed.c));
+            }
+          } else {
+            indexMap.set(k, out.length);
+            out.push(pt);
+          }
+        }
+        return out;
+      }
+
+      function buildSolverGenerator() {
+        if (state.solveAlgo === 'astar') return createAStarOrDijkstraGenerator(true);
+        if (state.solveAlgo === 'dijkstra') return createAStarOrDijkstraGenerator(false);
+        if (state.solveAlgo === 'wall_right') return createWallFollowerGenerator(true);
+        return createWallFollowerGenerator(false);
+      }
+
+      function startPathfinding(singleStep = false) {
+        if (state.isGenerating) finishGenerationInstant();
+
+        if (singleStep && state.solveStepper) {
+          const res = state.solveStepper.gen.next();
+          state.metrics.execTimeMs = performance.now() - state.solveStepper.t0;
+          updateTelemetryHUD();
+          if (res.done) {
+            finalizeSolver(res.value);
+          }
+          return;
+        }
+
+        stopActiveOperations();
+        clearPathfindingState();
+
+        const badge = document.getElementById('solveStatusBadge');
+        badge.textContent = 'SOLVING...';
+        badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-neon-amber border border-amber-500/40';
+
+        const gen = buildSolverGenerator();
+        const t0 = performance.now();
+
+        if (!state.animateSolve && !singleStep) {
+          let result = gen.next();
+          while (!result.done) {
+            result = gen.next();
+          }
+          state.metrics.execTimeMs = performance.now() - t0;
+          finalizeSolver(result.value);
+        } else if (singleStep) {
+          state.solveStepper = { gen, t0 };
+          const res = gen.next();
+          state.metrics.execTimeMs = performance.now() - t0;
+          updateTelemetryHUD();
+          if (res.done) finalizeSolver(res.value);
+        } else {
+          state.isSolving = true;
+          state.solveStepper = { gen, t0 };
+        }
+      }
+
+      function finalizeSolver(found) {
+        state.isSolving = false;
+        state.solveStepper = null;
+        state.frontierSet.clear();
+        updateTelemetryHUD();
+
+        const badge = document.getElementById('solveStatusBadge');
+        if (found || state.solutionPath.length > 0) {
+          badge.textContent = 'SOLVED (' + state.solutionPath.length + ' NODES)';
+          badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-neon-emerald border border-emerald-500/30';
+          SoundEngine.solveComplete();
+        } else {
+          badge.textContent = 'NO PATH';
+          badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/40';
+          SoundEngine.bump();
+        }
+      }
+
+      function finishGenerationInstant() {
+        if (!state.genStepper) return;
+        while (!state.genStepper.gen.next().done) {}
+        finishGeneration(performance.now() - state.genStepper.t0);
+      }
+
+      function stopActiveOperations() {
+        state.isGenerating = false;
+        state.genStepper = null;
+        state.isSolving = false;
+        state.solveStepper = null;
+      }
+
+      function updateTelemetryHUD() {
+        const totalCells = state.rows * state.cols;
+        const pct = totalCells > 0 ? Math.round((state.metrics.explored / totalCells) * 100) : 0;
+        document.getElementById('hudGridDims').innerHTML = `${state.cols} × ${state.rows} <span class="text-slate-500">(${totalCells})</span>`;
+        document.getElementById('hudExplored').innerHTML = `${state.metrics.explored} <span class="text-[10px] text-slate-400">(${pct}%)</span>`;
+        document.getElementById('hudPathLen').textContent = state.metrics.pathLen > 0 ? `${state.metrics.pathLen} cells` : '--';
+        document.getElementById('hudSteps').textContent = `${state.metrics.steps}`;
+        document.getElementById('hudExecTime').textContent = `${state.metrics.execTimeMs.toFixed(2)} ms`;
+      }
+
+      // =========================================================================
+      // 8. INTERACTIVE PLAY & DUNGEON EXPLORATION MODE
+      // =========================================================================
+      function setAppMode(newMode) {
+        state.mode = newMode;
+        const studioBtn = document.getElementById('modeStudioBtn');
+        const playBtn = document.getElementById('modePlayBtn');
+        const playBadge = document.getElementById('playStatusBadge');
+        const mainToggleText = document.getElementById('togglePlayModeMainText');
+        const bottomHint = document.getElementById('bottomModeHint');
+
+        if (newMode === 'play') {
+          if (state.isGenerating) finishGenerationInstant();
+          studioBtn.className = 'px-3 py-1.5 rounded-md text-xs font-mono font-medium transition-all flex items-center gap-1.5 text-slate-400 hover:text-white';
+          playBtn.className = 'px-3 py-1.5 rounded-md text-xs font-mono font-medium transition-all flex items-center gap-1.5 bg-emerald-500/20 text-neon-emerald border border-emerald-400/40 shadow-sm';
+          playBadge.textContent = 'EXPLORING';
+          playBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-neon-emerald border border-emerald-500/40';
+          mainToggleText.textContent = 'EXIT TO ARCHITECT STUDIO';
+          bottomHint.textContent = 'PLAYER MODE: Use WASD / Arrow Keys or D-Pad to reach the red EXIT beacon';
+          resetPlayerToStart(true);
+          activateSidebarTab('tab-play');
+        } else {
+          studioBtn.className = 'px-3 py-1.5 rounded-md text-xs font-mono font-medium transition-all flex items-center gap-1.5 bg-cyan-500/20 text-neon-cyan border border-cyan-400/40 shadow-sm';
+          playBtn.className = 'px-3 py-1.5 rounded-md text-xs font-mono font-medium transition-all flex items-center gap-1.5 text-slate-400 hover:text-white';
+          playBadge.textContent = 'INACTIVE';
+          playBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700';
+          mainToggleText.textContent = 'LAUNCH PLAYER MODE';
+          bottomHint.textContent = 'STUDIO MODE: Configure generation or run real-time pathfinding telemetry';
+          state.playTimerActive = false;
+          document.getElementById('victoryModal').classList.add('hidden');
+        }
+      }
+
+      function resetPlayerToStart(startTimer = false) {
+        state.player = { r: state.start.r, c: state.start.c };
+        state.playerSteps = 0;
+        state.breadcrumbs.clear();
+        state.breadcrumbs.add(keyOf(state.player.r, state.player.c));
+        state.playElapsedMs = 0;
+        state.playStartTime = performance.now();
+        state.playTimerActive = startTimer && state.mode === 'play';
+        state.playWon = false;
+        document.getElementById('victoryModal').classList.add('hidden');
+        updatePlayerHUD();
+      }
+
+      function movePlayer(dirKey) {
+        if (state.mode !== 'play') {
+          setAppMode('play');
+        }
+        if (state.playWon) return;
+
+        const r = state.player.r;
+        const c = state.player.c;
+        const cell = state.grid[r][c];
+        const deltas = {
+          N: { dr: -1, dc: 0 },
+          E: { dr: 0, dc: 1 },
+          S: { dr: 1, dc: 0 },
+          W: { dr: 0, dc: -1 }
+        };
+        const d = deltas[dirKey];
+        if (!d) return;
+
+        const nr = r + d.dr;
+        const nc = c + d.dc;
+
+        // Strict wall & boundary collision check
+        if (cell.walls[dirKey] || !inBounds(nr, nc) || state.grid[nr][nc].solid) {
+          SoundEngine.bump();
+          return;
+        }
+
+        if (!state.playTimerActive && state.playerSteps === 0) {
+          state.playStartTime = performance.now();
+          state.playTimerActive = true;
+        }
+
+        state.player.r = nr;
+        state.player.c = nc;
+        state.playerSteps++;
+        state.breadcrumbs.add(keyOf(nr, nc));
+        SoundEngine.step();
+        updatePlayerHUD();
+
+        // Check Victory Condition
+        if (nr === state.target.r && nc === state.target.c) {
+          state.playWon = true;
+          state.playTimerActive = false;
+          state.playElapsedMs = performance.now() - state.playStartTime;
+          SoundEngine.victory();
+
+          const optPath = findDirectBFSPath(state.start.r, state.start.c, state.target.r, state.target.c);
+          const optMoves = Math.max(1, optPath.length - 1);
+          const eff = Math.min(100, Math.round((optMoves / Math.max(1, state.playerSteps)) * 100));
+
+          document.getElementById('victoryTimeStat').textContent = formatTimeMs(state.playElapsedMs);
+          document.getElementById('victoryStepsStat').textContent = String(state.playerSteps);
+          document.getElementById('victoryEffStat').textContent = `${eff}%`;
+          document.getElementById('victoryModal').classList.remove('hidden');
+        }
+      }
+
+      function formatTimeMs(ms) {
+        const totalSec = ms / 1000;
+        const mins = Math.floor(totalSec / 60);
+        const secs = (totalSec % 60).toFixed(1).padStart(4, '0');
+        return `${String(mins).padStart(2, '0')}:${secs}`;
+      }
+
+      function updatePlayerHUD() {
+        document.getElementById('playStepsDisplay').textContent = String(state.playerSteps);
+        document.getElementById('playerPosDisplay').textContent = `(${state.player.c}, ${state.player.r})`;
+        document.getElementById('playTimerDisplay').textContent = formatTimeMs(state.playElapsedMs);
+      }
+
+      // =========================================================================
+      // 9. HIGH-PERFORMANCE 60 FPS DOUBLE-BUFFERED CANVAS RENDERER
+      // =========================================================================
+      function computeAutoFitCellSize() {
+        const viewport = document.getElementById('canvasViewport');
+        if (!viewport) return state.cellSize;
+        const availW = Math.max(260, viewport.clientWidth - 36);
+        const availH = Math.max(260, viewport.clientHeight - 36);
+        const fitW = Math.floor(availW / state.cols);
+        const fitH = Math.floor(availH / state.rows);
+        const fit = Math.max(6, Math.min(48, Math.min(fitW, fitH)));
+        return fit;
+      }
+
+      function renderMazeToContext(targetCtx, targetW, targetH, cellPx, wallPx) {
+        const theme = THEMES[state.themeKey];
+
+        // 1. Background fill
+        targetCtx.fillStyle = theme.bg;
+        targetCtx.fillRect(0, 0, targetW, targetH);
+
+        // 2. Floor cells, Heatmap, Frontier, Solid Rocks, and Breadcrumbs
+        const maxCost = Math.max(1, state.visitedOrder.length);
+
+        for (let r = 0; r < state.rows; r++) {
+          const y = r * cellPx;
+          for (let c = 0; c < state.cols; c++) {
+            const x = c * cellPx;
+            const cell = state.grid[r][c];
+            const k = keyOf(r, c);
+
+            if (cell.solid) {
+              targetCtx.fillStyle = theme.solidFill;
+              targetCtx.fillRect(x, y, cellPx, cellPx);
+              continue;
+            }
+
+            // Visited Pathfinding Heatmap
+            if (state.visitedMap.has(k)) {
+              if (state.showHeatmap) {
+                const ratio = Math.min(1, state.visitedMap.get(k) / Math.max(12, state.rows + state.cols));
+                targetCtx.fillStyle = ratio < 0.5 ? theme.visitedNear : theme.visitedFar;
+              } else {
+                targetCtx.fillStyle = theme.visitedNear;
+              }
+              targetCtx.fillRect(x, y, cellPx, cellPx);
+            }
+
+            // Active Generation Stack Highlight
+            if (state.genHighlightSet.has(k)) {
+              targetCtx.fillStyle = theme.genStack;
+              targetCtx.fillRect(x, y, cellPx, cellPx);
+            }
+
+            // Active Solver Frontier
+            if (state.frontierSet.has(k)) {
+              targetCtx.fillStyle = theme.frontier;
+              targetCtx.fillRect(x + 1, y + 1, Math.max(2, cellPx - 2), Math.max(2, cellPx - 2));
+            }
+
+            // Player Breadcrumbs
+            if (state.mode === 'play' && state.rememberBreadcrumbs && state.breadcrumbs.has(k)) {
+              targetCtx.fillStyle = theme.breadcrumb;
+              const pad = Math.max(2, cellPx * 0.28);
+              targetCtx.fillRect(x + pad, y + pad, cellPx - pad * 2, cellPx - pad * 2);
+            }
+          }
+        }
+
+        // 3. Subtle Technical Grid Lines (when cell size >= 12)
+        if (cellPx >= 12) {
+          targetCtx.strokeStyle = theme.gridLine;
+          targetCtx.lineWidth = 1;
+          targetCtx.beginPath();
+          for (let r = 0; r <= state.rows; r++) {
+            const y = Math.floor(r * cellPx) + 0.5;
+            targetCtx.moveTo(0, y);
+            targetCtx.lineTo(targetW, y);
+          }
+          for (let c = 0; c <= state.cols; c++) {
+            const x = Math.floor(c * cellPx) + 0.5;
+            targetCtx.moveTo(x, 0);
+            targetCtx.lineTo(x, targetH);
+          }
+          targetCtx.stroke();
+        }
+
+        // 4. Active Generation Head Indicator
+        if (state.genActiveCell) {
+          targetCtx.fillStyle = theme.genHead;
+          targetCtx.fillRect(
+            state.genActiveCell.c * cellPx + 1,
+            state.genActiveCell.r * cellPx + 1,
+            Math.max(2, cellPx - 2),
+            Math.max(2, cellPx - 2)
+          );
+        }
+
+        // 5. Finalized Shortest Solution Path (Neon Emerald Polyline)
+        if (state.solutionPath.length > 1) {
+          targetCtx.save();
+          targetCtx.strokeStyle = theme.path;
+          targetCtx.lineWidth = Math.max(2, cellPx * 0.32);
+          targetCtx.lineCap = 'round';
+          targetCtx.lineJoin = 'round';
+          if (theme.pathGlow) {
+            targetCtx.shadowColor = theme.pathGlow;
+            targetCtx.shadowBlur = 10;
+          }
+          targetCtx.beginPath();
+          for (let i = 0; i < state.solutionPath.length; i++) {
+            const pt = state.solutionPath[i];
+            const px = (pt.c + 0.5) * cellPx;
+            const py = (pt.r + 0.5) * cellPx;
+            if (i === 0) targetCtx.moveTo(px, py);
+            else targetCtx.lineTo(px, py);
+          }
+          targetCtx.stroke();
+          targetCtx.restore();
+        }
+
+        // 6. Maze Walls (Batched Single Path for 60FPS Sub-Pixel Rendering)
+        targetCtx.save();
+        targetCtx.strokeStyle = theme.wall;
+        targetCtx.lineWidth = wallPx;
+        targetCtx.lineCap = 'square';
+        targetCtx.beginPath();
+
+        // Outer top and left border where needed, plus East and South walls for each cell
+        for (let r = 0; r < state.rows; r++) {
+          const y1 = r * cellPx;
+          const y2 = (r + 1) * cellPx;
+          for (let c = 0; c < state.cols; c++) {
+            const x1 = c * cellPx;
+            const x2 = (c + 1) * cellPx;
+            const w = state.grid[r][c].walls;
+
+            if (r === 0 && w.N) {
+              targetCtx.moveTo(x1, y1);
+              targetCtx.lineTo(x2, y1);
+            }
+            if (c === 0 && w.W) {
+              targetCtx.moveTo(x1, y1);
+              targetCtx.lineTo(x1, y2);
+            }
+            if (w.E) {
+              targetCtx.moveTo(x2, y1);
+              targetCtx.lineTo(x2, y2);
+            }
+            if (w.S) {
+              targetCtx.moveTo(x1, y2);
+              targetCtx.lineTo(x2, y2);
+            }
+          }
+        }
+        targetCtx.stroke();
+        targetCtx.restore();
+
+        // 7. Start Beacon (Green) & Target/Exit Beacon (Red)
+        drawBeacon(
+          targetCtx,
+          state.start.c,
+          state.start.r,
+          cellPx,
+          theme.startBeacon,
+          'S'
+        );
+        drawBeacon(
+          targetCtx,
+          state.target.c,
+          state.target.r,
+          cellPx,
+          theme.targetBeacon,
+          'E'
+        );
+
+        // 8. Player Avatar & Dynamic Fog of War (in Play Mode)
+        if (state.mode === 'play') {
+          const px = (state.player.c + 0.5) * cellPx;
+          const py = (state.player.r + 0.5) * cellPx;
+          const radius = Math.max(3, cellPx * 0.34);
+
+          targetCtx.save();
+          targetCtx.fillStyle = theme.player;
+          targetCtx.shadowColor = theme.player;
+          targetCtx.shadowBlur = 12;
+          targetCtx.beginPath();
+          targetCtx.arc(px, py, radius, 0, Math.PI * 2);
+          targetCtx.fill();
+
+          targetCtx.strokeStyle = '#ffffff';
+          targetCtx.lineWidth = Math.max(1, cellPx * 0.08);
+          targetCtx.stroke();
+          targetCtx.restore();
+
+          // Fog of War Radial Dynamic Lighting Shroud
+          if (state.fogOfWar && !state.playWon) {
+            const sightPx = state.fogRadius * cellPx;
+            targetCtx.save();
+            const grad = targetCtx.createRadialGradient(
+              px,
+              py,
+              sightPx * 0.25,
+              px,
+              py,
+              sightPx
+            );
+            grad.addColorStop(0, 'rgba(5, 7, 14, 0)');
+            grad.addColorStop(0.7, 'rgba(5, 7, 14, 0.72)');
+            grad.addColorStop(1, theme.fogColor);
+            targetCtx.fillStyle = grad;
+            targetCtx.fillRect(0, 0, targetW, targetH);
+
+            // Keep Target Exit Beacon faintly pulsing through fog so user has directional bearing
+            drawBeacon(
+              targetCtx,
+              state.target.c,
+              state.target.r,
+              cellPx,
+              theme.targetBeacon,
+              'E'
+            );
+            targetCtx.restore();
+          }
+        }
+      }
+
+      function drawBeacon(targetCtx, c, r, cellPx, color, label) {
+        const cx = (c + 0.5) * cellPx;
+        const cy = (r + 0.5) * cellPx;
+        const rad = Math.max(3, cellPx * 0.36);
+
+        targetCtx.save();
+        targetCtx.fillStyle = color;
+        targetCtx.shadowColor = color;
+        targetCtx.shadowBlur = 8;
+        targetCtx.beginPath();
+        targetCtx.arc(cx, cy, rad, 0, Math.PI * 2);
+        targetCtx.fill();
+
+        if (cellPx >= 16) {
+          targetCtx.fillStyle = '#05070e';
+          targetCtx.font = `bold ${Math.floor(cellPx * 0.42)}px "JetBrains Mono", monospace`;
+          targetCtx.textAlign = 'center';
+          targetCtx.textBaseline = 'middle';
+          targetCtx.fillText(label, cx, cy + 0.5);
+        }
+        targetCtx.restore();
+      }
+
+      function syncCanvasDimensions() {
+        if (state.autoFit) {
+          state.cellSize = computeAutoFitCellSize();
+          document.getElementById('cellSizeSlider').value = String(state.cellSize);
+          document.getElementById('cellSizeVal').textContent = `AUTO (${state.cellSize}px)`;
+        } else {
+          document.getElementById('cellSizeVal').textContent = `${state.cellSize} px`;
+        }
+
+        const totalW = state.cols * state.cellSize;
+        const totalH = state.rows * state.cellSize;
+
+        if (canvas.width !== totalW || canvas.height !== totalH) {
+          canvas.width = totalW;
+          canvas.height = totalH;
+          offscreenCanvas.width = totalW;
+          offscreenCanvas.height = totalH;
+        }
+      }
+
+      // =========================================================================
+      // 10. MAIN 60 FPS ANIMATION & TELEMETRY LOOP
+      // =========================================================================
+      let lastFrameTime = performance.now();
+      let frameCounter = 0;
+      let fpsTimer = performance.now();
+
+      function tickFrame(now) {
+        frameCounter++;
+        if (now - fpsTimer >= 500) {
+          const fps = Math.min(60, Math.round((frameCounter * 1000) / (now - fpsTimer)));
+          document.getElementById('fpsHud').textContent = `${fps} FPS`;
+          frameCounter = 0;
+          fpsTimer = now;
+        }
+        lastFrameTime = now;
+
+        // Step Animated Maze Generator
+        if (state.isGenerating && state.genStepper) {
+          const stepsPerFrame = Math.max(
+            1,
+            Math.floor(Math.pow(state.genSpeed / 15, 2.2))
+          );
+          for (let i = 0; i < stepsPerFrame; i++) {
+            const res = state.genStepper.gen.next();
+            if (res.done) {
+              finishGeneration(performance.now() - state.genStepper.t0);
+              break;
+            }
+          }
+        }
+
+        // Step Animated Pathfinding Solver
+        if (state.isSolving && state.solveStepper) {
+          const stepsPerFrame = Math.max(
+            1,
+            Math.floor(Math.pow(state.solveSpeed / 14, 2.1))
+          );
+          for (let i = 0; i < stepsPerFrame; i++) {
+            const res = state.solveStepper.gen.next();
+            state.metrics.execTimeMs = performance.now() - state.solveStepper.t0;
+            if (res.done) {
+              finalizeSolver(res.value);
+              break;
+            }
+          }
+          updateTelemetryHUD();
+        }
+
+        // Update Live Player Timer
+        if (state.mode === 'play' && state.playTimerActive && !state.playWon) {
+          state.playElapsedMs = now - state.playStartTime;
+          document.getElementById('playTimerDisplay').textContent = formatTimeMs(state.playElapsedMs);
+        }
+
+        // Render to offscreen double buffer, then blit to visible canvas
+        syncCanvasDimensions();
+        renderMazeToContext(
+          offCtx,
+          offscreenCanvas.width,
+          offscreenCanvas.height,
+          state.cellSize,
+          state.wallThickness
+        );
+        ctx.drawImage(offscreenCanvas, 0, 0);
+
+        requestAnimationFrame(tickFrame);
+      }
+
+      // =========================================================================
+      // 11. MULTI-FORMAT EXPORT ENGINE (PNG 300 DPI, VECTOR SVG, TILEMAP JSON)
+      // =========================================================================
+      function exportHighResPNG() {
+        const scale = state.dpi300 ? 4 : 1;
+        const exportCellSize = Math.max(16, state.cellSize) * scale;
+        const exportWallPx = state.wallThickness * scale;
+        const exportW = state.cols * exportCellSize;
+        const exportH = state.rows * exportCellSize;
+
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = exportW;
+        exportCanvas.height = exportH;
+        const exportCtx = exportCanvas.getContext('2d', { alpha: false });
+
+        renderMazeToContext(exportCtx, exportW, exportH, exportCellSize, exportWallPx);
+
+        const dataUrl = exportCanvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `labyrinth_${state.genAlgo}_${state.cols}x${state.rows}${state.dpi300 ? '_300dpi' : ''}.png`;
+        link.href = dataUrl;
+        link.click();
+        showToast(`Exported PNG (${exportW}×${exportH}px)`);
+      }
+
+      function exportVectorSVG() {
+        const cellPx = 24;
+        const svgW = state.cols * cellPx;
+        const svgH = state.rows * cellPx;
+        const theme = THEMES[state.themeKey];
+
+        const wallSegments = [];
+        for (let r = 0; r < state.rows; r++) {
+          const y1 = r * cellPx;
+          const y2 = (r + 1) * cellPx;
+          for (let c = 0; c < state.cols; c++) {
+            const x1 = c * cellPx;
+            const x2 = (c + 1) * cellPx;
+            const w = state.grid[r][c].walls;
+            if (r === 0 && w.N) wallSegments.push(`M${x1},${y1} L${x2},${y1}`);
+            if (c === 0 && w.W) wallSegments.push(`M${x1},${y1} L${x1},${y2}`);
+            if (w.E) wallSegments.push(`M${x2},${y1} L${x2},${y2}`);
+            if (w.S) wallSegments.push(`M${x1},${y2} L${x2},${y2}`);
+          }
+        }
+
+        let solutionPolyline = '';
+        if (state.solutionPath.length > 1) {
+          const pts = state.solutionPath
+            .map((p) => `${(p.c + 0.5) * cellPx},${(p.r + 0.5) * cellPx}`)
+            .join(' ');
+          solutionPolyline = `<polyline points="${pts}" fill="none" stroke="${theme.path}" stroke-width="${Math.max(2, cellPx * 0.28)}" stroke-linecap="round" stroke-linejoin="round" />`;
+        }
+
+        const startCx = (state.start.c + 0.5) * cellPx;
+        const startCy = (state.start.r + 0.5) * cellPx;
+        const targetCx = (state.target.c + 0.5) * cellPx;
+        const targetCy = (state.target.r + 0.5) * cellPx;
+
+        const svgContent = [
+          `<?xml version="1.0" encoding="UTF-8"?>`,
+          `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}">`,
+          `  <rect width="100%" height="100%" fill="${theme.bg}" />`,
+          solutionPolyline ? `  ${solutionPolyline}` : '',
+          `  <path d="${wallSegments.join(' ')}" fill="none" stroke="${theme.wall}" stroke-width="${state.wallThickness}" stroke-linecap="square" />`,
+          `  <circle cx="${startCx}" cy="${startCy}" r="${cellPx * 0.32}" fill="${theme.startBeacon}" />`,
+          `  <circle cx="${targetCx}" cy="${targetCy}" r="${cellPx * 0.32}" fill="${theme.targetBeacon}" />`,
+          `</svg>`
+        ]
+          .filter(Boolean)
+          .join('\n');
+
+        const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `labyrinth_${state.genAlgo}_${state.cols}x${state.rows}.svg`;
+        link.href = url;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast('Exported clean Vector SVG file');
+      }
+
+      function buildTilemapJSONObject() {
+        // Build expanded (2*rows+1) x (2*cols+1) 2D Tilemap array where 0 = empty floor, 1 = wall
+        const tileRows = state.rows * 2 + 1;
+        const tileCols = state.cols * 2 + 1;
+        const tilemap = Array.from({ length: tileRows }, () => new Array(tileCols).fill(1));
+
+        for (let r = 0; r < state.rows; r++) {
+          for (let c = 0; c < state.cols; c++) {
+            const cell = state.grid[r][c];
+            if (cell.solid) continue;
+            const tr = r * 2 + 1;
+            const tc = c * 2 + 1;
+            tilemap[tr][tc] = 0;
+            if (!cell.walls.N && r > 0) tilemap[tr - 1][tc] = 0;
+            if (!cell.walls.S && r < state.rows - 1) tilemap[tr + 1][tc] = 0;
+            if (!cell.walls.W && c > 0) tilemap[tr][tc - 1] = 0;
+            if (!cell.walls.E && c < state.cols - 1) tilemap[tr][tc + 1] = 0;
+          }
+        }
+
+        return {
+          studio: 'LABYRINTH//CORE v4.2',
+          algorithm: state.genAlgo,
+          theme: state.themeKey,
+          cellDimensions: { cols: state.cols, rows: state.rows },
+          tilemapDimensions: { width: tileCols, height: tileRows },
+          anchors: {
+            startCell: { x: state.start.c, y: state.start.r },
+            targetCell: { x: state.target.c, y: state.target.r },
+            startTile: { x: state.start.c * 2 + 1, y: state.start.r * 2 + 1 },
+            targetTile: { x: state.target.c * 2 + 1, y: state.target.r * 2 + 1 }
+          },
+          legend: { 0: 'empty_floor', 1: 'solid_wall' },
+          tiles: tilemap
+        };
+      }
+
+      function exportTilemapJSONFile() {
+        const payload = JSON.stringify(buildTilemapJSONObject(), null, 2);
+        const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `labyrinth_tilemap_${state.cols}x${state.rows}.json`;
+        link.href = url;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast('Exported 2D Tilemap JSON file');
+      }
+
+      // =========================================================================
+      // 12. CANVAS INTERACTION (DRAG BEACONS & WALL CARVING BRUSH)
+      // =========================================================================
+      function getCanvasCellFromEvent(evt) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+        const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const x = (clientX - rect.left) * scaleX;
+        const y = (clientY - rect.top) * scaleY;
+        const c = Math.floor(x / state.cellSize);
+        const r = Math.floor(y / state.cellSize);
+        if (!inBounds(r, c)) return null;
+        return { r, c };
+      }
+
+      let lastBrushCell = null;
+
+      function handlePointerDown(evt) {
+        const pos = getCanvasCellFromEvent(evt);
+        if (!pos) return;
+
+        // Check if clicking on Start or Target beacon
+        if (pos.r === state.start.r && pos.c === state.start.c) {
+          state.draggingAnchor = 'start';
+          return;
+        }
+        if (pos.r === state.target.r && pos.c === state.target.c) {
+          state.draggingAnchor = 'target';
+          return;
+        }
+
+        if (state.wallBrushActive) {
+          state.draggingAnchor = 'wall';
+          lastBrushCell = pos;
+          const cell = state.grid[pos.r][pos.c];
+          if (state.genAlgo === 'cellular') {
+            state.wallBrushMode = !cell.solid;
+            cell.solid = state.wallBrushMode;
+            syncCaveWallsFromSolids();
+          } else {
+            // Carve open passage to adjacent cells when dragging
+            clearPathfindingState();
+          }
+        }
+      }
+
+      function handlePointerMove(evt) {
+        const pos = getCanvasCellFromEvent(evt);
+        if (pos) {
+          document.getElementById('cursorCellHud').textContent = `CURSOR: (${pos.c}, ${pos.r})`;
+        } else {
+          document.getElementById('cursorCellHud').textContent = 'CURSOR: --';
+          return;
+        }
+
+        if (!state.draggingAnchor) return;
+
+        if (state.draggingAnchor === 'start') {
+          if (
+            !state.grid[pos.r][pos.c].solid &&
+            (pos.r !== state.target.r || pos.c !== state.target.c)
+          ) {
+            if (state.start.r !== pos.r || state.start.c !== pos.c) {
+              state.start = { r: pos.r, c: pos.c };
+              updateBeaconLabels();
+              if (state.mode === 'play') resetPlayerToStart(false);
+              if (state.solutionPath.length > 0 && !state.isSolving) {
+                startPathfinding(false);
+              }
+            }
+          }
+        } else if (state.draggingAnchor === 'target') {
+          if (
+            !state.grid[pos.r][pos.c].solid &&
+            (pos.r !== state.start.r || pos.c !== state.start.c)
+          ) {
+            if (state.target.r !== pos.r || state.target.c !== pos.c) {
+              state.target = { r: pos.r, c: pos.c };
+              updateBeaconLabels();
+              if (state.solutionPath.length > 0 && !state.isSolving) {
+                startPathfinding(false);
+              }
+            }
+          }
+        } else if (state.draggingAnchor === 'wall' && state.wallBrushActive) {
+          if (state.genAlgo === 'cellular') {
+            if (
+              (pos.r !== state.start.r || pos.c !== state.start.c) &&
+              (pos.r !== state.target.r || pos.c !== state.target.c)
+            ) {
+              state.grid[pos.r][pos.c].solid = state.wallBrushMode;
+              syncCaveWallsFromSolids();
+            }
+          } else if (lastBrushCell && (lastBrushCell.r !== pos.r || lastBrushCell.c !== pos.c)) {
+            const dr = Math.abs(pos.r - lastBrushCell.r);
+            const dc = Math.abs(pos.c - lastBrushCell.c);
+            if (dr + dc === 1) {
+              removeWallBetween(
+                state.grid[lastBrushCell.r][lastBrushCell.c],
+                state.grid[pos.r][pos.c]
+              );
+              countDeadEnds();
+            }
+            lastBrushCell = pos;
+          }
+        }
+      }
+
+      function handlePointerUp() {
+        state.draggingAnchor = null;
+        lastBrushCell = null;
+      }
+
+      // =========================================================================
+      // 13. UI EVENT BINDINGS & SIDEBAR NAVIGATION
+      // =========================================================================
+      function activateSidebarTab(tabId) {
+        document.querySelectorAll('.sidebar-section').forEach((sec) => {
+          sec.classList.toggle('hidden', sec.id !== tabId);
+        });
+        document.querySelectorAll('.sidebar-tab-btn').forEach((btn) => {
+          const active = btn.getAttribute('data-tab') === tabId;
+          if (active) {
+            btn.className =
+              'sidebar-tab-btn px-2 py-2 rounded-md text-[11px] font-mono font-semibold uppercase tracking-wider transition flex flex-col items-center gap-1 bg-cyan-500/15 text-neon-cyan border border-cyan-400/40';
+          } else {
+            btn.className =
+              'sidebar-tab-btn px-2 py-2 rounded-md text-[11px] font-mono font-semibold uppercase tracking-wider transition flex flex-col items-center gap-1 text-slate-400 hover:text-white border border-transparent';
+          }
+        });
+      }
+
+      function bindUIEvents() {
+        // Sidebar Tabs
+        document.querySelectorAll('.sidebar-tab-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            activateSidebarTab(btn.getAttribute('data-tab'));
+          });
+        });
+
+        // Header Mode Buttons
+        document.getElementById('modeStudioBtn').addEventListener('click', () => setAppMode('studio'));
+        document.getElementById('modePlayBtn').addEventListener('click', () => setAppMode('play'));
+        document.getElementById('togglePlayModeMainBtn').addEventListener('click', () => {
+          setAppMode(state.mode === 'play' ? 'studio' : 'play');
+        });
+
+        // Wall Carve Brush Toggle
+        document.getElementById('wallBrushBtn').addEventListener('click', () => {
+          state.wallBrushActive = !state.wallBrushActive;
+          const label = document.getElementById('wallBrushLabel');
+          const btn = document.getElementById('wallBrushBtn');
+          if (state.wallBrushActive) {
+            label.textContent = 'CARVE WALLS: ON';
+            btn.classList.add('border-cyan-400', 'text-neon-cyan');
+            showToast('Wall Brush Active: Drag across cells on the grid to carve passages');
+          } else {
+            label.textContent = 'CARVE WALLS: OFF';
+            btn.classList.remove('border-cyan-400', 'text-neon-cyan');
+          }
+        });
+
+        // Sound Mute Toggle
+        document.getElementById('soundToggleBtn').addEventListener('click', () => {
+          SoundEngine.muted = !SoundEngine.muted;
+          document.getElementById('soundOnIcon').classList.toggle('hidden', SoundEngine.muted);
+          document.getElementById('soundOffIcon').classList.toggle('hidden', !SoundEngine.muted);
+          showToast(SoundEngine.muted ? 'Telemetry Audio Muted' : 'Telemetry Audio Enabled');
+        });
+
+        // Generation Controls
+        document.getElementById('genAlgoSelect').addEventListener('change', (e) => {
+          state.genAlgo = e.target.value;
+          document.getElementById('genAlgoDesc').textContent = GEN_DESCRIPTIONS[state.genAlgo] || '';
+          startMazeGeneration();
+        });
+
+        const widthSlider = document.getElementById('gridWidthSlider');
+        const heightSlider = document.getElementById('gridHeightSlider');
+
+        widthSlider.addEventListener('input', (e) => {
+          state.cols = parseInt(e.target.value, 10);
+          document.getElementById('gridWidthVal').textContent = String(state.cols);
+        });
+        widthSlider.addEventListener('change', () => {
+          state.target = { r: state.rows - 1, c: state.cols - 1 };
+          startMazeGeneration();
+        });
+
+        heightSlider.addEventListener('input', (e) => {
+          state.rows = parseInt(e.target.value, 10);
+          document.getElementById('gridHeightVal').textContent = String(state.rows);
+        });
+        heightSlider.addEventListener('change', () => {
+          state.target = { r: state.rows - 1, c: state.cols - 1 };
+          startMazeGeneration();
+        });
+
+        // Dimension Presets
+        document.querySelectorAll('.dim-preset-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const [w, h] = btn.getAttribute('data-preset').split(',').map(Number);
+            state.cols = w;
+            state.rows = h;
+            widthSlider.value = String(w);
+            heightSlider.value = String(h);
+            document.getElementById('gridWidthVal').textContent = String(w);
+            document.getElementById('gridHeightVal').textContent = String(h);
+            state.start = { r: 0, c: 0 };
+            state.target = { r: h - 1, c: w - 1 };
+            startMazeGeneration();
+          });
+        });
+
+        // Auto-Fit & Cell Size / Wall Thickness
+        document.getElementById('autoFitToggle').addEventListener('change', (e) => {
+          state.autoFit = e.target.checked;
+          syncCanvasDimensions();
+        });
+
+        document.getElementById('cellSizeSlider').addEventListener('input', (e) => {
+          state.autoFit = false;
+          document.getElementById('autoFitToggle').checked = false;
+          state.cellSize = parseInt(e.target.value, 10);
+          syncCanvasDimensions();
+        });
+
+        document.getElementById('wallThicknessSlider').addEventListener('input', (e) => {
+          state.wallThickness = parseFloat(e.target.value);
+          document.getElementById('wallThicknessVal').textContent = `${state.wallThickness.toFixed(1)} px`;
+        });
+
+        document.getElementById('animateGenToggle').addEventListener('change', (e) => {
+          state.animateGen = e.target.checked;
+        });
+
+        document.getElementById('genSpeedSlider').addEventListener('input', (e) => {
+          state.genSpeed = parseInt(e.target.value, 10);
+          document.getElementById('genSpeedVal').textContent = `${state.genSpeed}%`;
+        });
+
+        document.getElementById('generateMazeBtn').addEventListener('click', () => startMazeGeneration());
+        document.getElementById('quickGenBtn').addEventListener('click', () => startMazeGeneration());
+        document.getElementById('braidMazeBtn').addEventListener('click', () => braidMazeLoops());
+        document.getElementById('clearGridBtn').addEventListener('click', () => openArenaGrid());
+
+        // Solver Controls
+        document.getElementById('solveAlgoSelect').addEventListener('change', (e) => {
+          state.solveAlgo = e.target.value;
+          document.getElementById('solveAlgoDesc').textContent = SOLVE_DESCRIPTIONS[state.solveAlgo] || '';
+          document.getElementById('heuristicGroup').classList.toggle('hidden', state.solveAlgo !== 'astar');
+        });
+
+        document.querySelectorAll('.heuristic-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            state.heuristic = btn.getAttribute('data-heuristic');
+            document.querySelectorAll('.heuristic-btn').forEach((b) => {
+              const active = b.getAttribute('data-heuristic') === state.heuristic;
+              b.className = active
+                ? 'heuristic-btn py-1.5 px-2 rounded-lg text-xs font-mono bg-amber-500/20 text-neon-amber border border-amber-400/40'
+                : 'heuristic-btn py-1.5 px-2 rounded-lg text-xs font-mono bg-obsidian-900 text-slate-400 border border-slate-700 hover:text-white';
+            });
+          });
+        });
+
+        document.getElementById('animateSolveToggle').addEventListener('change', (e) => {
+          state.animateSolve = e.target.checked;
+        });
+
+        document.getElementById('solveSpeedSlider').addEventListener('input', (e) => {
+          state.solveSpeed = parseInt(e.target.value, 10);
+          document.getElementById('solveSpeedVal').textContent = `${state.solveSpeed}%`;
+        });
+
+        document.getElementById('showHeatmapToggle').addEventListener('change', (e) => {
+          state.showHeatmap = e.target.checked;
+        });
+
+        document.getElementById('randomizeAnchorsBtn').addEventListener('click', () => {
+          const openCells = [];
+          for (let r = 0; r < state.rows; r++) {
+            for (let c = 0; c < state.cols; c++) {
+              if (!state.grid[r][c].solid) openCells.push({ r, c });
+            }
+          }
+          if (openCells.length >= 2) {
+            const s = openCells[Math.floor(Math.random() * openCells.length)];
+            let t = openCells[Math.floor(Math.random() * openCells.length)];
+            if (s.r === t.r && s.c === t.c) t = openCells[(openCells.indexOf(s) + 1) % openCells.length];
+            state.start = s;
+            state.target = t;
+            updateBeaconLabels();
+            resetPlayerToStart(false);
+            clearPathfindingState();
+          }
+        });
+
+        document.getElementById('runSolverBtn').addEventListener('click', () => startPathfinding(false));
+        document.getElementById('quickSolveBtn').addEventListener('click', () => startPathfinding(false));
+        document.getElementById('stepSolverBtn').addEventListener('click', () => startPathfinding(true));
+        document.getElementById('clearSolutionBtn').addEventListener('click', () => clearPathfindingState());
+        document.getElementById('quickClearSolveBtn').addEventListener('click', () => clearPathfindingState());
+
+        // Player Controls
+        document.getElementById('fogOfWarToggle').addEventListener('change', (e) => {
+          state.fogOfWar = e.target.checked;
+        });
+
+        document.getElementById('fogRadiusSlider').addEventListener('input', (e) => {
+          state.fogRadius = parseInt(e.target.value, 10);
+          document.getElementById('fogRadiusVal').textContent = `${state.fogRadius} CELLS`;
+        });
+
+        document.getElementById('breadcrumbsToggle').addEventListener('change', (e) => {
+          state.rememberBreadcrumbs = e.target.checked;
+        });
+
+        document.querySelectorAll('.dpad-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            movePlayer(btn.getAttribute('data-move'));
+          });
+        });
+
+        document.getElementById('resetPlayerBtn').addEventListener('click', () => {
+          resetPlayerToStart(true);
+          showToast('Player reset to Start Beacon');
+        });
+
+        // Victory Modal Buttons
+        document.getElementById('victoryNewMazeBtn').addEventListener('click', () => {
+          document.getElementById('victoryModal').classList.add('hidden');
+          startMazeGeneration();
+          resetPlayerToStart(true);
+        });
+        document.getElementById('victoryReplayBtn').addEventListener('click', () => {
+          resetPlayerToStart(true);
+        });
+        document.getElementById('victoryCloseBtn').addEventListener('click', () => {
+          document.getElementById('victoryModal').classList.add('hidden');
+        });
+
+        // Theme Customizer Cards
+        document.querySelectorAll('.theme-card-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const key = btn.getAttribute('data-theme');
+            state.themeKey = key;
+            document.getElementById('themeIndicator').textContent = `THEME: ${THEMES[key].name}`;
+            if (key === 'monochrome') {
+              state.wallThickness = 1;
+              document.getElementById('wallThicknessSlider').value = '1';
+              document.getElementById('wallThicknessVal').textContent = '1.0 px';
+            }
+            document.querySelectorAll('.theme-card-btn').forEach((card) => {
+              const isSelected = card.getAttribute('data-theme') === key;
+              card.className = isSelected
+                ? 'theme-card-btn p-2.5 rounded-xl border border-cyan-400/60 bg-obsidian-900/90 flex items-center justify-between text-left transition'
+                : 'theme-card-btn p-2.5 rounded-xl border border-slate-800 bg-obsidian-900/50 hover:border-slate-600 flex items-center justify-between text-left transition';
+              const badge = card.querySelector('span:last-child');
+              if (badge) {
+                badge.textContent = isSelected ? 'ACTIVE' : 'SELECT';
+                badge.className = isSelected
+                  ? 'text-[10px] font-mono text-neon-cyan'
+                  : 'text-[10px] font-mono text-slate-500';
+              }
+            });
+            showToast(`Applied ${THEMES[key].name} visual theme`);
+          });
+        });
+
+        // Export Buttons
+        document.getElementById('dpi300Toggle').addEventListener('change', (e) => {
+          state.dpi300 = e.target.checked;
+        });
+        document.getElementById('exportPngBtn').addEventListener('click', exportHighResPNG);
+        document.getElementById('exportSvgBtn').addEventListener('click', exportVectorSVG);
+        document.getElementById('exportJsonBtn').addEventListener('click', exportTilemapJSONFile);
+
+        // JSON Inspector Modal
+        document.getElementById('inspectJsonModalBtn').addEventListener('click', () => {
+          const jsonText = JSON.stringify(buildTilemapJSONObject(), null, 2);
+          document.getElementById('jsonPreviewArea').value = jsonText;
+          document.getElementById('jsonModal').classList.remove('hidden');
+        });
+        document.getElementById('closeJsonModalBtn').addEventListener('click', () => {
+          document.getElementById('jsonModal').classList.add('hidden');
+        });
+        document.getElementById('downloadJsonFromModalBtn').addEventListener('click', () => {
+          exportTilemapJSONFile();
+        });
+        document.getElementById('copyJsonBtn').addEventListener('click', () => {
+          const area = document.getElementById('jsonPreviewArea');
+          area.select();
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(area.value).then(() => {
+                showToast('Copied Tilemap JSON to clipboard');
+              }).catch(() => {
+                document.execCommand('copy');
+                showToast('Copied Tilemap JSON to clipboard');
+              });
+            } else {
+              document.execCommand('copy');
+              showToast('Copied Tilemap JSON to clipboard');
+            }
+          } catch (err) {
+            document.execCommand('copy');
+            showToast('Copied Tilemap JSON to clipboard');
+          }
+        });
+
+        // Canvas Pointer Events
+        canvas.addEventListener('mousedown', handlePointerDown);
+        window.addEventListener('mousemove', handlePointerMove);
+        window.addEventListener('mouseup', handlePointerUp);
+
+        canvas.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          handlePointerDown(e);
+        }, { passive: false });
+        canvas.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          handlePointerMove(e);
+        }, { passive: false });
+        window.addEventListener('touchend', handlePointerUp);
+
+        // Keyboard Navigation (WASD / Arrow Keys)
+        window.addEventListener('keydown', (e) => {
+          const tag = document.activeElement ? document.activeElement.tagName : '';
+          if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+
+          const keyMap = {
+            ArrowUp: 'N',
+            KeyW: 'N',
+            ArrowRight: 'E',
+            KeyD: 'E',
+            ArrowDown: 'S',
+            KeyS: 'S',
+            ArrowLeft: 'W',
+            KeyA: 'W'
+          };
+
+          const dir = keyMap[e.code];
+          if (dir) {
+            e.preventDefault();
+            movePlayer(dir);
+          }
+        });
+
+        window.addEventListener('resize', () => {
+          syncCanvasDimensions();
+        });
+      }
+
+      // =========================================================================
+      // 14. INITIALIZATION ON WINDOW LOAD
+      // =========================================================================
+      window.onload = function () {
+        bindUIEvents();
+        startMazeGeneration();
+        syncCanvasDimensions();
+        requestAnimationFrame(tickFrame);
+      };
+    })();
+  </script>
+</body>
+</html>
