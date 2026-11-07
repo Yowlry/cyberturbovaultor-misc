@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIPHER//VAULT — Crypto PassGen Studio</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-obsidian: #05070e;
+            --card-glass: rgba(13, 18, 30, 0.85);
+            --border-glass: rgba(26, 35, 51, 0.8);
+            --neon-cyan: #00f0ff;
+            --emerald: #00ff9d;
+            --amber: #ffb800;
+            --red-alert: #ff3366;
+        }
+        
+        body {
+            background-color: var(--bg-obsidian);
+            font-family: 'Inter', sans-serif;
+            color: #e2e8f0;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 240, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(0, 255, 157, 0.03) 0%, transparent 50%);
+        }
+
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0a0f1a; }
+        ::-webkit-scrollbar-thumb { background: #1a2333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #2a3750; }
+
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background-color: var(--card-glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* Neon Interactive Elements */
+        .btn-neon {
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--neon-cyan);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            transition: all 0.2s ease;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.1) inset;
+        }
+        .btn-neon:hover {
+            background: rgba(0, 240, 255, 0.2);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4), 0 0 10px rgba(0, 240, 255, 0.2) inset;
+            border-color: var(--neon-cyan);
+        }
+        .btn-neon:active { transform: scale(0.98); }
+
+        /* Form Inputs */
+        input[type="range"] {
+            accent-color: var(--neon-cyan);
+        }
+        
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: var(--neon-cyan);
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: var(--neon-cyan);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+        }
+        .toggle-label {
+            transition: all 0.3s ease;
+        }
+
+        /* Syntax Highlighting in Output */
+        .syntax-digit { color: var(--amber); }
+        .syntax-symbol { color: var(--neon-cyan); }
+        .syntax-letter { color: #ffffff; }
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        .toast-enter { animation: slideInRight 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .toast-exit { animation: fadeOut 0.3s ease-in forwards; }
+        @keyframes fadeOut { to { opacity: 0; transform: translateX(20px); } }
+
+        /* Tab active state */
+        .tab-active {
+            border-bottom: 2px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+        }
+
+        /* Strength Meter Segments */
+        .meter-segment { transition: all 0.5s ease; width: 24%; height: 6px; border-radius: 3px; background: #1a2333; }
+        .meter-red { background: var(--red-alert); box-shadow: 0 0 8px var(--red-alert); }
+        .meter-amber { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+        .meter-cyan { background: var(--neon-cyan); box-shadow: 0 0 8px var(--neon-cyan); }
+        .meter-emerald { background: var(--emerald); box-shadow: 0 0 8px var(--emerald); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col p-4 md:p-8" onload="initApp()">
+
+    <!-- Header -->
+    <header class="max-w-5xl mx-auto w-full mb-8 flex justify-between items-end">
+        <div>
+            <h1 class="text-3xl font-bold tracking-wider text-white flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-[#00f0ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                CIPHER<span class="text-[#1a2333]">//</span><span class="text-[#00f0ff]">VAULT</span>
+            </h1>
+            <p class="text-sm text-gray-400 mt-1 font-mono uppercase tracking-widest text-xs">Cryptographically Secure Offline Generator</p>
+        </div>
+        <div class="hidden sm:flex flex-col items-end text-xs font-mono text-gray-500">
+            <span>CLIENT_SIDE_ONLY: TRUE</span>
+            <span class="text-emerald-400">STATUS: AIRGAPPED & SECURE</span>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="max-w-5xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
+        
+        <!-- Left Column: Controls -->
+        <section class="lg:col-span-7 glass-panel rounded-xl flex flex-col overflow-hidden">
+            <!-- Tabs -->
+            <div class="flex border-b border-[#1a2333] bg-[#080b14]">
+                <button onclick="switchTab('character')" id="tab-character" class="tab-btn tab-active flex-1 py-4 text-sm font-semibold tracking-wide uppercase transition-colors hover:bg-[#0d121e]">
+                    Character Matrix
+                </button>
+                <button onclick="switchTab('passphrase')" id="tab-passphrase" class="tab-btn flex-1 py-4 text-sm font-semibold tracking-wide uppercase text-gray-500 transition-colors hover:bg-[#0d121e]">
+                    Diceware Passphrase
+                </button>
+            </div>
+
+            <div class="p-6 flex-grow overflow-y-auto">
+                <!-- Mode A: Character Matrix -->
+                <div id="mode-character" class="space-y-6 animate-fade-in">
+                    <!-- Length Control -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-sm font-medium text-gray-300">Complexity Length</label>
+                            <input type="number" id="char-length-num" min="6" max="128" value="24" class="bg-[#0a0f1a] border border-[#1a2333] rounded px-2 py-1 text-right font-mono text-[#00f0ff] w-20 focus:outline-none focus:border-[#00f0ff]">
+                        </div>
+                        <input type="range" id="char-length" min="6" max="128" value="24" class="w-full h-2 bg-[#1a2333] rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <hr class="border-[#1a2333]">
+
+                    <!-- Toggles -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-300">Uppercase (A-Z)</span>
+                            <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" id="toggle-uppercase" checked class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-[#05070e] border-2 border-gray-500 appearance-none cursor-pointer transition-all duration-300 top-0 z-10"/>
+                                <label for="toggle-uppercase" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-700 cursor-pointer"></label>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-300">Lowercase (a-z)</span>
+                            <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" id="toggle-lowercase" checked class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-[#05070e] border-2 border-gray-500 appearance-none cursor-pointer transition-all duration-300 top-0 z-10"/>
+                                <label for="toggle-lowercase" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-700 cursor-pointer"></label>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-300">Digits (0-9)</span>
+                            <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" id="toggle-digits" checked class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-[#05070e] border-2 border-gray-500 appearance-none cursor-pointer transition-all duration-300 top-0 z-10"/>
+                                <label for="toggle-digits" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-700 cursor-pointer"></label>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-300">Std Symbols (!@#$...)</span>
+                            <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" id="toggle-symbols-std" checked class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-[#05070e] border-2 border-gray-500 appearance-none cursor-pointer transition-all duration-300 top-0 z-10"/>
+                                <label for="toggle-symbols-std" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-700 cursor-pointer"></label>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-300">Ambiguous Symbols ({}[]/\...)</span>
+                            <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" id="toggle-symbols-amb" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-[#05070e] border-2 border-gray-500 appearance-none cursor-pointer transition-all duration-300 top-0 z-10"/>
+                                <label for="toggle-symbols-amb" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-700 cursor-pointer"></label>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-[#ffb800]" title="Excludes 0, O, o, 1, l, I, |">Exclude Lookalikes</span>
+                            <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" id="toggle-exclude-ambiguous" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-[#05070e] border-2 border-gray-500 appearance-none cursor-pointer transition-all duration-300 top-0 z-10"/>
+                                <label for="toggle-exclude-ambiguous" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-700 cursor-pointer"></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="border-[#1a2333]">
+
+                    <!-- Custom Injection -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Custom Character Injection <span class="text-xs text-gray-500 font-normal">(Force include specific symbols)</span></label>
+                        <input type="text" id="custom-inject" placeholder="e.g. ™£€" class="w-full bg-[#0a0f1a] border border-[#1a2333] rounded px-3 py-2 font-mono text-sm text-[#00f0ff] focus:outline-none focus:border-[#00f0ff] transition-colors">
+                    </div>
+                </div>
+
+                <!-- Mode B: Passphrase -->
+                <div id="mode-passphrase" class="space-y-6 hidden">
+                    <!-- Word Count -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-sm font-medium text-gray-300">Word Count</label>
+                            <input type="number" id="word-count-num" min="3" max="12" value="6" class="bg-[#0a0f1a] border border-[#1a2333] rounded px-2 py-1 text-right font-mono text-[#00f0ff] w-16 focus:outline-none focus:border-[#00f0ff]">
+                        </div>
+                        <input type="range" id="word-count" min="3" max="12" value="6" class="w-full h-2 bg-[#1a2333] rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <hr class="border-[#1a2333]">
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <!-- Separator -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Separator</label>
+                            <select id="pass-separator" class="w-full bg-[#0a0f1a] border border-[#1a2333] rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00f0ff] appearance-none">
+                                <option value="-">Hyphen (-)</option>
+                                <option value="_">Underscore (_)</option>
+                                <option value=".">Period (.)</option>
+                                <option value=" ">Space ( )</option>
+                                <option value="custom">Custom...</option>
+                            </select>
+                            <input type="text" id="custom-separator" maxlength="3" placeholder="e.g. #" class="w-full bg-[#0a0f1a] border border-[#1a2333] rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00f0ff] mt-2 hidden text-center font-mono">
+                        </div>
+
+                        <!-- Capitalization -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Capitalization</label>
+                            <select id="pass-caps" class="w-full bg-[#0a0f1a] border border-[#1a2333] rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00f0ff] appearance-none">
+                                <option value="lowercase">all lowercase</option>
+                                <option value="title">Title Case</option>
+                                <option value="uppercase">ALL UPPERCASE</option>
+                                <option value="random">rAnDoM CAse</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Generation Action Area -->
+            <div class="p-6 bg-[#080b14] border-t border-[#1a2333] flex flex-col sm:flex-row gap-4 items-center justify-between">
+                <div class="flex items-center gap-3 text-sm text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+                    </svg>
+                    <span>Press <kbd class="px-1.5 py-0.5 bg-[#1a2333] rounded text-[#00f0ff] font-mono text-xs">Space</kbd> to reroll</span>
+                </div>
+                <button onclick="generatePrimary()" class="btn-neon px-8 py-3 rounded-lg font-bold tracking-wide uppercase flex items-center gap-2 w-full sm:w-auto justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Generate
+                </button>
+            </div>
+        </section>
+
+        <!-- Right Column: Output & HUD -->
+        <section class="lg:col-span-5 flex flex-col gap-6">
+            
+            <!-- Primary Output Card -->
+            <div class="glass-panel rounded-xl p-6 relative group flex flex-col">
+                <h2 class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-4">Primary Output Matrix</h2>
+                
+                <div class="bg-[#05070e] border border-[#1a2333] rounded-lg p-4 mb-4 relative min-h-[100px] flex items-center justify-center break-all text-center">
+                    <span id="primary-output" class="font-mono text-xl leading-relaxed tracking-wider"></span>
+                    
+                    <!-- One-Click Copy Overlay -->
+                    <button onclick="copyPrimary()" class="absolute inset-0 w-full h-full bg-[#0d121e]/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-[#00f0ff] font-bold uppercase tracking-wider rounded-lg border-2 border-transparent hover:border-[#00f0ff]/50">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Copy to Clipboard
+                    </button>
+                </div>
+
+                <!-- Strength Meter -->
+                <div class="mb-2 flex justify-between items-center text-xs font-mono uppercase">
+                    <span id="strength-label" class="text-gray-400">Strength: Evaluating...</span>
+                    <span id="entropy-bits" class="text-[#00f0ff]">-- bits</span>
+                </div>
+                <div class="w-full flex justify-between gap-1 mb-4">
+                    <div id="seg-1" class="meter-segment"></div>
+                    <div id="seg-2" class="meter-segment"></div>
+                    <div id="seg-3" class="meter-segment"></div>
+                    <div id="seg-4" class="meter-segment"></div>
+                </div>
+
+                <!-- Telemetry HUD -->
+                <div class="grid grid-cols-2 gap-4 mt-auto">
+                    <div class="bg-[#080b14] border border-[#1a2333] p-3 rounded-lg">
+                        <p class="text-[10px] text-gray-500 font-mono uppercase mb-1">Score (1-10)</p>
+                        <p id="score-rating" class="text-lg font-bold text-white">--</p>
+                    </div>
+                    <div class="bg-[#080b14] border border-[#1a2333] p-3 rounded-lg">
+                        <p class="text-[10px] text-gray-500 font-mono uppercase mb-1">Crack Time (@10^10/s)</p>
+                        <p id="crack-time" class="text-sm font-bold text-white truncate" title="Estimated time against standard offline attack">--</p>
+                    </div>
+                    <div class="col-span-2 bg-[#080b14] border border-[#1a2333] p-3 rounded-lg">
+                        <p class="text-[10px] text-gray-500 font-mono uppercase mb-1">Security Analysis</p>
+                        <p id="security-analysis" class="text-xs text-gray-400 leading-relaxed min-h-[40px]">Awaiting generation criteria...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Batch Dock -->
+            <div class="glass-panel rounded-xl p-6 flex-grow flex flex-col">
+                <h2 class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-4 flex justify-between items-center">
+                    <span>Batch Production Dock</span>
+                    <select id="batch-quantity" class="bg-[#05070e] border border-[#1a2333] text-[#00f0ff] text-xs px-2 py-1 rounded outline-none cursor-pointer">
+                        <option value="1">1</option>
+                        <option value="5">5</option>
+                        <option value="10" selected>10</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </h2>
+                
+                <div class="flex-grow bg-[#05070e] border border-[#1a2333] rounded-lg p-2 overflow-y-auto mb-4 relative max-h-[180px]">
+                    <div id="batch-list" class="font-mono text-sm space-y-1">
+                        <!-- Batch items injected here -->
+                    </div>
+                    <!-- Mask Toggle -->
+                    <button onclick="toggleBatchMask()" class="absolute top-2 right-2 p-1 bg-[#1a2333] rounded text-gray-400 hover:text-white transition-colors" title="Toggle Mask">
+                        <svg id="mask-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mt-auto">
+                    <button onclick="exportBatch('txt')" class="bg-[#1a2333] hover:bg-[#2a3750] text-gray-300 text-xs font-bold py-2 rounded transition-colors uppercase tracking-wider flex items-center justify-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        TXT
+                    </button>
+                    <button onclick="exportBatch('csv')" class="bg-[#1a2333] hover:bg-[#2a3750] text-gray-300 text-xs font-bold py-2 rounded transition-colors uppercase tracking-wider flex items-center justify-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        CSV
+                    </button>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 flex flex-col gap-2 z-50 pointer-events-none"></div>
+
+    <script>
+        /**
+         * CIPHER//VAULT - Core Engine
+         * Cryptographically secure, 100% offline.
+         */
+
+        // --- Configuration & State ---
+        let currentMode = 'character'; // 'character' or 'passphrase'
+        let currentPrimaryPassword = '';
+        let currentBatch = [];
+        let isBatchMasked = false;
+        let currentEntropyBits = 0;
+
+        // Character Sets
+        const CHARS = {
+            upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+            lower: 'abcdefghijklmnopqrstuvwxyz',
+            digits: '0123456789',
+            symbolsStd: '!@#$%^&*',
+            symbolsAmb: '{}[]()/\\\'"`~,;:.<>',
+            ambiguousToExclude: '0Oo1lI|'
+        };
+
+        // Embedded Dictionary (250 distinct, common, 4-8 letter words for usability and security)
+        const DICTIONARY = [
+            "acid", "acorn", "action", "agent", "alarm", "alien", "alpha", "amber", "angel", "apple",
+            "argon", "armor", "arrow", "atlas", "atom", "audio", "aura", "bacon", "badge", "baker",
+            "bamboo", "bandit", "bank", "banner", "barrel", "basket", "beacon", "beast", "beetle", "bell",
+            "belt", "berry", "bingo", "bird", "biscuit", "black", "blade", "blank", "blaze", "blend",
+            "block", "blood", "bloom", "blue", "board", "boat", "bomb", "bone", "book", "boom",
+            "boot", "border", "boss", "bottle", "bounce", "boxer", "brain", "brake", "branch", "brass",
+            "brave", "bread", "breeze", "brick", "bridge", "brief", "bright", "broad", "broken", "bronze",
+            "broom", "brown", "brush", "bubble", "bucket", "buddy", "bullet", "bunch", "bunker", "burger",
+            "burn", "burst", "bush", "butter", "button", "cabin", "cable", "cactus", "cadet", "cage",
+            "cake", "camera", "camp", "canary", "candle", "candy", "cannon", "canoe", "canvas", "canyon",
+            "carbon", "card", "cargo", "carpet", "carrot", "cart", "castle", "cat", "cause", "cave",
+            "celery", "cell", "chain", "chair", "chalk", "champ", "chance", "change", "chaos", "charge",
+            "charm", "chart", "chase", "cheap", "cheat", "check", "cheese", "cherry", "chess", "chest",
+            "chief", "child", "chill", "chip", "choice", "choir", "chunk", "church", "cider", "cigar",
+            "circle", "city", "civic", "civil", "claim", "clamp", "clan", "clash", "clasp", "class",
+            "claw", "clay", "clean", "clear", "clerk", "click", "cliff", "climb", "clip", "cloak",
+            "clock", "clone", "close", "cloth", "cloud", "clown", "club", "clump", "cluster", "clutch",
+            "coach", "coal", "coast", "coat", "cobra", "code", "coffee", "coil", "coin", "cold",
+            "collar", "color", "comet", "comic", "common", "cone", "cookie", "copper", "coral", "core",
+            "corner", "cosmic", "cotton", "couch", "count", "court", "cover", "cow", "crab", "craft",
+            "crash", "crate", "crawl", "crazy", "cream", "credit", "creek", "crest", "crew", "crib",
+            "crime", "crisp", "crop", "cross", "crow", "crowd", "crown", "cruise", "crush", "crust",
+            "crystal", "cube", "cuckoo", "curve", "custom", "cycle", "dagger", "daily", "damage", "dance",
+            "danger", "dark", "dart", "dash", "data", "dawn", "dead", "deal", "dear", "death"
+        ];
+
+        // --- Initialization ---
+        function initApp() {
+            // Sync slider and number inputs
+            syncInput('char-length', 'char-length-num');
+            syncInput('word-count', 'word-count-num');
+
+            // Handle Custom Separator logic
+            const sepSelect = document.getElementById('pass-separator');
+            const customSepInput = document.getElementById('custom-separator');
+            sepSelect.addEventListener('change', (e) => {
+                if(e.target.value === 'custom') {
+                    customSepInput.classList.remove('hidden');
+                    customSepInput.focus();
+                } else {
+                    customSepInput.classList.add('hidden');
+                }
+            });
+
+            // Add hotkey listener
+            document.addEventListener('keydown', (e) => {
+                // Prevent triggering if typing in text inputs
+                const activeTag = document.activeElement.tagName.toLowerCase();
+                if (activeTag === 'input' && document.activeElement.type === 'text') return;
+                if (activeTag === 'input' && document.activeElement.type === 'number') return;
+                
+                if (e.code === 'Space' || e.code === 'Enter') {
+                    e.preventDefault();
+                    generatePrimary();
+                }
+            });
+
+            // Initial Generation
+            generatePrimary();
+        }
+
+        function syncInput(rangeId, numId) {
+            const range = document.getElementById(rangeId);
+            const num = document.getElementById(numId);
+            
+            range.addEventListener('input', () => { num.value = range.value; generatePrimary(); });
+            num.addEventListener('input', () => { 
+                let val = parseInt(num.value);
+                let min = parseInt(num.min);
+                let max = parseInt(num.max);
+                if (val < min) val = min;
+                if (val > max) val = max;
+                range.value = val; 
+                generatePrimary();
+            });
+        }
+
+        function switchTab(mode) {
+            currentMode = mode;
+            document.getElementById('tab-character').classList.remove('tab-active', 'text-gray-500');
+            document.getElementById('tab-passphrase').classList.remove('tab-active', 'text-gray-500');
+            
+            if(mode === 'character') {
+                document.getElementById('tab-character').classList.add('tab-active');
+                document.getElementById('tab-passphrase').classList.add('text-gray-500');
+                document.getElementById('mode-character').classList.remove('hidden');
+                document.getElementById('mode-passphrase').classList.add('hidden');
+            } else {
+                document.getElementById('tab-passphrase').classList.add('tab-active');
+                document.getElementById('tab-character').classList.add('text-gray-500');
+                document.getElementById('mode-passphrase').classList.remove('hidden');
+                document.getElementById('mode-character').classList.add('hidden');
+            }
+            generatePrimary();
+        }
+
+        // --- Core Cryptographic Generator ---
+
+        /**
+         * Secure rejection sampling to avoid modulo bias when picking from an array/pool.
+         * Strictly uses window.crypto.getRandomValues.
+         */
+        function getSecureRandomInt(max) {
+            if (max <= 0) return 0;
+            // Find max value for 32-bit unsigned int that is a multiple of 'max'
+            const maxSafe = Math.floor(4294967295 / max) * max;
+            const array = new Uint32Array(1);
+            let val;
+            do {
+                window.crypto.getRandomValues(array);
+                val = array[0];
+            } while (val >= maxSafe); // Reject values that cause bias
+            return val % max;
+        }
+
+        function buildCharacterPool() {
+            let pool = '';
+            if (document.getElementById('toggle-uppercase').checked) pool += CHARS.upper;
+            if (document.getElementById('toggle-lowercase').checked) pool += CHARS.lower;
+            if (document.getElementById('toggle-digits').checked) pool += CHARS.digits;
+            if (document.getElementById('toggle-symbols-std').checked) pool += CHARS.symbolsStd;
+            if (document.getElementById('toggle-symbols-amb').checked) pool += CHARS.symbolsAmb;
+
+            // Handle exclusions
+            if (document.getElementById('toggle-exclude-ambiguous').checked) {
+                const regex = new RegExp(`[${CHARS.ambiguousToExclude.replace(/\\/g, '\\\\').replace(/\]/g, '\\]')}]`, 'g');
+                pool = pool.replace(regex, '');
+            }
+
+            // Handle custom injection (add unique chars)
+            const customChars = document.getElementById('custom-inject').value;
+            for (const char of customChars) {
+                if (!pool.includes(char)) pool += char;
+            }
+
+            return pool;
+        }
+
+        function generateCharacterPassword(length, pool) {
+            if (pool.length === 0) return { pw: 'ERROR: Empty Pool', poolSize: 0 };
+            
+            let password = '';
+            for (let i = 0; i < length; i++) {
+                const idx = getSecureRandomInt(pool.length);
+                password += pool[idx];
+            }
+            return { pw: password, poolSize: pool.length };
+        }
+
+        function generatePassphrase() {
+            const wordCount = parseInt(document.getElementById('word-count-num').value);
+            const sepSelect = document.getElementById('pass-separator').value;
+            let separator = sepSelect;
+            if (sepSelect === 'custom') {
+                separator = document.getElementById('custom-separator').value;
+                if(!separator) separator = '-'; // fallback
+            }
+
+            const caps = document.getElementById('pass-caps').value;
+            let words = [];
+
+            for (let i = 0; i < wordCount; i++) {
+                const idx = getSecureRandomInt(DICTIONARY.length);
+                let word = DICTIONARY[idx];
+
+                if (caps === 'uppercase') word = word.toUpperCase();
+                else if (caps === 'title') word = word.charAt(0).toUpperCase() + word.slice(1);
+                else if (caps === 'random') {
+                    // Randomize each letter
+                    let rWord = '';
+                    for(let char of word) {
+                        rWord += getSecureRandomInt(2) === 0 ? char.toUpperCase() : char.toLowerCase();
+                    }
+                    word = rWord;
+                }
+                words.push(word);
+            }
+
+            return { pw: words.join(separator), poolSize: DICTIONARY.length, wordCount: wordCount };
+        }
+
+        // --- Telemetry & Analytics ---
+
+        function calculateMetrics(result) {
+            let entropy = 0;
+            let analysis = "";
+            let score = 1;
+            
+            if (currentMode === 'character') {
+                const length = result.pw.length;
+                const poolSize = result.poolSize;
+                if(poolSize > 0) {
+                    entropy = length * Math.log2(poolSize);
+                }
+                
+                // Detailed Analysis for Char Mode
+                let hasUpper = /[A-Z]/.test(result.pw);
+                let hasLower = /[a-z]/.test(result.pw);
+                let hasNum = /[0-9]/.test(result.pw);
+                let hasSym = /[^A-Za-z0-9]/.test(result.pw);
+                let diversityCount = [hasUpper, hasLower, hasNum, hasSym].filter(Boolean).length;
+
+                if (length < 8) analysis = "Critically short. Length is the most important factor in brute-force resistance.";
+                else if (diversityCount < 2) analysis = "Low character diversity. Mixing cases, numbers, and symbols increases pool size exponentially.";
+                else if (entropy > 80) analysis = `Excellent parameters. Using ${poolSize} distinct characters over ${length} positions yields cryptographically secure output.`;
+                else analysis = "Standard security. Consider increasing length for robust future-proofing against GPU arrays.";
+
+                // Calculate Score (1-10) based on Entropy primarily, tweaked by diversity
+                score = Math.min(10, Math.max(1, Math.floor(entropy / 12) + (diversityCount > 2 ? 1 : 0)));
+                if(length < 8) score = Math.min(score, 3);
+
+            } else {
+                // Diceware entropy: Words * log2(Dictionary Size)
+                const words = result.wordCount;
+                entropy = words * Math.log2(result.poolSize);
+                
+                const caps = document.getElementById('pass-caps').value;
+                if(caps === 'random') {
+                    // Approximate added entropy for random capitalization per char
+                    entropy += (result.pw.replace(/[^a-zA-Z]/g, '').length * 1); 
+                }
+
+                if (words < 5) analysis = "Diceware passphrases rely on word count. 3-4 words can be vulnerable to targeted dictionary attacks.";
+                else if (entropy > 80) analysis = `Strong structural entropy. ${words} words drawn securely from the dictionary provides excellent memorability and security.`;
+                else analysis = "Good baseline. Adding numbers or custom separators can mitigate dictionary guessing slightly.";
+
+                score = Math.min(10, Math.max(1, Math.floor(entropy / 12)));
+            }
+
+            return { entropy, analysis, score };
+        }
+
+        function updateHUD(metrics) {
+            currentEntropyBits = Math.floor(metrics.entropy);
+            document.getElementById('entropy-bits').innerText = `${currentEntropyBits} bits`;
+            
+            // Score
+            document.getElementById('score-rating').innerText = `${metrics.score} / 10`;
+            document.getElementById('security-analysis').innerText = metrics.analysis;
+
+            // Crack time estimation (Assuming offline fast hash attack @ 10^10 guesses/sec)
+            // Combinations = 2^entropy. Seconds = 2^entropy / 10^10
+            let seconds = Math.pow(2, metrics.entropy) / 10000000000;
+            let crackStr = "";
+            if (seconds < 1) crackStr = "Instant";
+            else if (seconds < 60) crackStr = `${Math.floor(seconds)} seconds`;
+            else if (seconds < 3600) crackStr = `${Math.floor(seconds/60)} minutes`;
+            else if (seconds < 86400) crackStr = `${Math.floor(seconds/3600)} hours`;
+            else if (seconds < 31536000) crackStr = `${Math.floor(seconds/86400)} days`;
+            else if (seconds < 3153600000) crackStr = `${Math.floor(seconds/31536000)} years`;
+            else crackStr = "Centuries+";
+            
+            // Prevent infinity display
+            if (!isFinite(seconds) || seconds > 1e20) crackStr = "Universe Lifetimes";
+            
+            document.getElementById('crack-time').innerText = crackStr;
+
+            // Visual Meter Update
+            const segments = [
+                document.getElementById('seg-1'),
+                document.getElementById('seg-2'),
+                document.getElementById('seg-3'),
+                document.getElementById('seg-4')
+            ];
+            const label = document.getElementById('strength-label');
+
+            // Reset classes
+            segments.forEach(seg => {
+                seg.className = 'meter-segment';
+            });
+            label.className = '';
+
+            let e = metrics.entropy;
+            if (e < 36) {
+                segments[0].classList.add('meter-red');
+                label.innerText = "Strength: Very Weak";
+                label.classList.add('text-red-500');
+                document.getElementById('score-rating').className = 'text-lg font-bold text-red-500';
+            } else if (e < 60) {
+                segments[0].classList.add('meter-amber');
+                segments[1].classList.add('meter-amber');
+                label.innerText = "Strength: Moderate";
+                label.classList.add('text-[#ffb800]');
+                document.getElementById('score-rating').className = 'text-lg font-bold text-[#ffb800]';
+            } else if (e < 128) {
+                segments[0].classList.add('meter-cyan');
+                segments[1].classList.add('meter-cyan');
+                segments[2].classList.add('meter-cyan');
+                label.innerText = "Strength: Strong";
+                label.classList.add('text-[#00f0ff]');
+                document.getElementById('score-rating').className = 'text-lg font-bold text-[#00f0ff]';
+            } else {
+                segments[0].classList.add('meter-emerald');
+                segments[1].classList.add('meter-emerald');
+                segments[2].classList.add('meter-emerald');
+                segments[3].classList.add('meter-emerald');
+                label.innerText = "Strength: Overkill";
+                label.classList.add('text-[#00ff9d]');
+                document.getElementById('score-rating').className = 'text-lg font-bold text-[#00ff9d]';
+            }
+        }
+
+        // --- UI Rendering ---
+
+        function renderSyntaxHighlighted(pw) {
+            let res = '';
+            for (let i = 0; i < pw.length; i++) {
+                const char = pw[i];
+                // Prevent HTML injection
+                let safeChar = char;
+                if(char === '<') safeChar = '&lt;';
+                else if(char === '>') safeChar = '&gt;';
+                else if(char === '&') safeChar = '&amp;';
+                else if(char === '"') safeChar = '&quot;';
+
+                if (/[0-9]/.test(char)) {
+                    res += `<span class="syntax-digit">${safeChar}</span>`;
+                } else if (/[^a-zA-Z0-9\s]/.test(char)) {
+                    res += `<span class="syntax-symbol">${safeChar}</span>`;
+                } else {
+                    res += `<span class="syntax-letter">${safeChar}</span>`;
+                }
+            }
+            return res;
+        }
+
+        function generatePrimary() {
+            let result;
+            if (currentMode === 'character') {
+                const length = parseInt(document.getElementById('char-length-num').value);
+                const pool = buildCharacterPool();
+                result = generateCharacterPassword(length, pool);
+            } else {
+                result = generatePassphrase();
+            }
+
+            currentPrimaryPassword = result.pw;
+            
+            // Adjust font size based on length
+            const outputEl = document.getElementById('primary-output');
+            if (currentPrimaryPassword.length > 60) outputEl.className = 'font-mono text-xs leading-relaxed tracking-wider';
+            else if (currentPrimaryPassword.length > 30) outputEl.className = 'font-mono text-sm leading-relaxed tracking-wider';
+            else outputEl.className = 'font-mono text-xl leading-relaxed tracking-wider';
+
+            outputEl.innerHTML = renderSyntaxHighlighted(currentPrimaryPassword);
+
+            const metrics = calculateMetrics(result);
+            updateHUD(metrics);
+            
+            // Auto-generate batch list matching current criteria
+            generateBatchList();
+        }
+
+        function generateBatchList() {
+            const qty = parseInt(document.getElementById('batch-quantity').value);
+            currentBatch = [];
+            const listContainer = document.getElementById('batch-list');
+            listContainer.innerHTML = '';
+
+            let pool = '';
+            if(currentMode === 'character') pool = buildCharacterPool();
+            const length = parseInt(document.getElementById('char-length-num').value);
+
+            for (let i = 0; i < qty; i++) {
+                let pw = '';
+                if (currentMode === 'character') {
+                    pw = generateCharacterPassword(length, pool).pw;
+                } else {
+                    pw = generatePassphrase().pw;
+                }
+                currentBatch.push(pw);
+
+                // Render item
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center p-1.5 hover:bg-[#1a2333]/50 rounded transition-colors group';
+                
+                const span = document.createElement('span');
+                span.className = 'truncate pr-4 text-gray-300';
+                span.innerHTML = isBatchMasked ? '•'.repeat(Math.min(pw.length, 20)) : renderSyntaxHighlighted(pw);
+                
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'text-[#00f0ff] opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-[#1a2333] rounded hover:bg-cyan-900';
+                copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>`;
+                copyBtn.onclick = () => copyText(pw);
+
+                div.appendChild(span);
+                div.appendChild(copyBtn);
+                listContainer.appendChild(div);
+            }
+        }
+
+        // Add listener to select
+        document.getElementById('batch-quantity').addEventListener('change', generateBatchList);
+
+        function toggleBatchMask() {
+            isBatchMasked = !isBatchMasked;
+            const icon = document.getElementById('mask-icon');
+            if (isBatchMasked) {
+                // Eye off
+                icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />`;
+            } else {
+                // Eye on
+                icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />`;
+            }
+            generateBatchList(); // re-render
+        }
+
+        // --- System Operations (Copy/Export) ---
+
+        function copyPrimary() {
+            copyText(currentPrimaryPassword);
+        }
+
+        function copyText(text) {
+            // Use modern clipboard API if available, fallback to execCommand
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(showToast).catch(err => {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            try {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-9999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast();
+            } catch (err) {
+                console.error('Fallback copy failed', err);
+            }
+        }
+
+        function showToast() {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'bg-[#05070e] border border-[#00ff9d] text-[#00ff9d] px-4 py-3 rounded-lg shadow-lg font-mono text-sm flex items-center gap-2 toast-enter';
+            toast.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+                Payload Copied to Clipboard
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+
+        function exportBatch(format) {
+            if (currentBatch.length === 0) return;
+            
+            let content = '';
+            let mime = 'text/plain';
+            let extension = format;
+            let filename = `cipher_vault_batch_${new Date().getTime()}.${extension}`;
+
+            if (format === 'csv') {
+                mime = 'text/csv';
+                content = 'Password,Length,EntropyBits\n';
+                currentBatch.forEach(pw => {
+                    // Escape quotes for CSV
+                    let escapedPw = pw.replace(/"/g, '""');
+                    content += `"${escapedPw}",${pw.length},${currentEntropyBits}\n`;
+                });
+            } else {
+                content = `=== CIPHER//VAULT BATCH EXPORT ===\n`;
+                content += `Date: ${new Date().toISOString()}\n`;
+                content += `Entropy Configuration: ~${currentEntropyBits} bits\n`;
+                content += `===================================\n\n`;
+                currentBatch.forEach(pw => { content += `${pw}\n`; });
+            }
+
+            const blob = new Blob([content], { type: mime });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            // Feedback
+            const btn = event.currentTarget;
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `<span class="text-[#00ff9d]">EXPORTED</span>`;
+            setTimeout(() => { btn.innerHTML = originalHtml; }, 2000);
+        }
+
+        // Add change listeners to all toggles in character mode to trigger regeneration
+        document.querySelectorAll('#mode-character input[type="checkbox"]').forEach(el => {
+            el.addEventListener('change', generatePrimary);
+        });
+        document.getElementById('custom-inject').addEventListener('input', generatePrimary);
+        document.getElementById('pass-separator').addEventListener('change', generatePrimary);
+        document.getElementById('custom-separator').addEventListener('input', generatePrimary);
+        document.getElementById('pass-caps').addEventListener('change', generatePrimary);
+
+    </script>
+</body>
+</html>
