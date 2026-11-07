@@ -1,0 +1,2273 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>POLY//SCAN WEB — Client-Side Universal Multi-Language Static Code Analyzer & Security Workbench</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          colors: {
+            obsidian: {
+              950: '#05070e',
+              900: '#090d18',
+              800: '#0d121e',
+              700: '#151d30',
+              600: '#1f2b47'
+            },
+            neon: {
+              cyan: '#00f0ff',
+              emerald: '#00ff9d',
+              fuchsia: '#ff007f',
+              amber: '#ffb800',
+              purple: '#bd00ff'
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    body {
+      background-color: #05070e;
+      color: #e2e8f0;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+    .glass-panel {
+      background: rgba(13, 18, 30, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 240, 255, 0.14);
+    }
+    .glass-panel-subtle {
+      background: rgba(9, 13, 24, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .cyber-grid {
+      background-image: 
+        linear-gradient(to right, rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    .neon-border-cyan {
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.15), inset 0 0 15px rgba(0, 240, 255, 0.05);
+      border-color: rgba(0, 240, 255, 0.45);
+    }
+    .neon-border-fuchsia {
+      box-shadow: 0 0 16px rgba(255, 0, 127, 0.2), inset 0 0 12px rgba(255, 0, 127, 0.06);
+      border-color: rgba(255, 0, 127, 0.55);
+    }
+    .neon-text-cyan {
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+    }
+    .neon-text-fuchsia {
+      text-shadow: 0 0 10px rgba(255, 0, 127, 0.5);
+    }
+    .neon-text-emerald {
+      text-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
+    }
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #05070e;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1f2b47;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #00f0ff;
+    }
+    .code-line-target {
+      background: linear-gradient(90deg, rgba(255, 0, 127, 0.22) 0%, rgba(255, 0, 127, 0.05) 100%);
+      border-left: 3px solid #ff007f;
+    }
+    .code-line-context {
+      background: rgba(0, 240, 255, 0.04);
+      border-left: 3px solid rgba(0, 240, 255, 0.3);
+    }
+    .code-line-normal {
+      border-left: 3px solid transparent;
+    }
+    @keyframes pulse-fast {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .animate-pulse-fast {
+      animation: pulse-fast 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col cyber-grid selection:bg-neon-cyan selection:text-obsidian-950">
+
+  <!-- TOP HEADER & REAL-TIME TELEMETRY HUD -->
+  <header class="glass-panel sticky top-0 z-30 border-b border-cyan-500/20 px-4 py-2.5">
+    <div class="max-w-[1920px] mx-auto flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Brand Identity -->
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-obsidian-900 border border-neon-cyan/50 flex items-center justify-center shadow-[0_0_12px_rgba(0,240,255,0.25)]">
+          <svg class="w-5 h-5 text-neon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-mono font-bold text-base tracking-wider text-white">
+              POLY<span class="text-neon-cyan neon-text-cyan">//</span>SCAN <span class="text-xs font-normal px-1.5 py-0.5 rounded bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30">WEB v4.2</span>
+            </h1>
+            <span class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-950/60 text-neon-emerald border border-neon-emerald/30">
+              <span class="w-1.5 h-1.5 rounded-full bg-neon-emerald animate-pulse"></span>
+              AIR-GAPPED // ZERO-EGRESS
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400 font-mono hidden md:block">
+            Universal Client-Side Static Code Analyzer &amp; Entropy Workbench (11 Languages • Web Worker Engine)
+          </p>
+        </div>
+      </div>
+
+      <!-- Telemetry Metrics Bar -->
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <!-- Execution Metrics -->
+        <div class="flex items-center gap-3 bg-obsidian-950/90 border border-slate-800 rounded-lg px-3 py-1.5 text-xs font-mono">
+          <div>
+            <span class="text-slate-500">FILES:</span>
+            <span id="hud-files" class="text-neon-cyan font-semibold ml-1">0</span>
+          </div>
+          <span class="text-slate-700">|</span>
+          <div>
+            <span class="text-slate-500">LOC:</span>
+            <span id="hud-loc" class="text-neon-cyan font-semibold ml-1">0</span>
+          </div>
+          <span class="text-slate-700">|</span>
+          <div>
+            <span class="text-slate-500">TIME:</span>
+            <span id="hud-time" class="text-neon-emerald font-semibold ml-1">0.0 ms</span>
+          </div>
+        </div>
+
+        <!-- Severity Count Badges -->
+        <div class="flex items-center gap-1.5 font-mono text-xs">
+          <button id="badge-filter-CRITICAL" data-sev="CRITICAL" class="sev-quick-btn px-2.5 py-1 rounded bg-fuchsia-950/80 border border-neon-fuchsia/50 text-neon-fuchsia hover:bg-neon-fuchsia/20 transition flex items-center gap-1.5" title="Filter Critical Findings">
+            <span class="w-2 h-2 rounded-full bg-neon-fuchsia"></span>
+            <span>CRIT</span>
+            <strong id="hud-crit" class="font-bold">0</strong>
+          </button>
+          <button id="badge-filter-HIGH" data-sev="HIGH" class="sev-quick-btn px-2.5 py-1 rounded bg-amber-950/80 border border-neon-amber/50 text-neon-amber hover:bg-neon-amber/20 transition flex items-center gap-1.5" title="Filter High Findings">
+            <span class="w-2 h-2 rounded-full bg-neon-amber"></span>
+            <span>HIGH</span>
+            <strong id="hud-high" class="font-bold">0</strong>
+          </button>
+          <button id="badge-filter-MEDIUM" data-sev="MEDIUM" class="sev-quick-btn px-2.5 py-1 rounded bg-cyan-950/80 border border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/20 transition flex items-center gap-1.5" title="Filter Medium Findings">
+            <span class="w-2 h-2 rounded-full bg-neon-cyan"></span>
+            <span>MED</span>
+            <strong id="hud-med" class="font-bold">0</strong>
+          </button>
+          <button id="badge-filter-LOW" data-sev="LOW" class="sev-quick-btn px-2.5 py-1 rounded bg-emerald-950/80 border border-neon-emerald/40 text-neon-emerald hover:bg-neon-emerald/20 transition flex items-center gap-1.5" title="Filter Low Findings">
+            <span class="w-2 h-2 rounded-full bg-neon-emerald"></span>
+            <span>LOW</span>
+            <strong id="hud-low" class="font-bold">0</strong>
+          </button>
+        </div>
+
+        <!-- Workspace Actions -->
+        <div class="flex items-center gap-1.5">
+          <button id="btn-open-rules" class="px-2.5 py-1.5 rounded-lg bg-obsidian-900 hover:bg-obsidian-700 text-slate-200 border border-slate-700 hover:border-neon-cyan/50 text-xs font-mono flex items-center gap-1.5 transition">
+            <svg class="w-3.5 h-3.5 text-neon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+            <span>MATRIX (<span id="rule-count-label">0</span>)</span>
+          </button>
+          <button id="btn-save-idb" class="px-2.5 py-1.5 rounded-lg bg-obsidian-900 hover:bg-obsidian-700 text-slate-200 border border-slate-700 hover:border-neon-emerald/50 text-xs font-mono flex items-center gap-1.5 transition" title="Save Current Scan Workspace to IndexedDB">
+            <svg class="w-3.5 h-3.5 text-neon-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+            </svg>
+            <span class="hidden xl:inline">SAVE DB</span>
+          </button>
+          <button id="btn-load-idb" class="px-2.5 py-1.5 rounded-lg bg-obsidian-900 hover:bg-obsidian-700 text-slate-200 border border-slate-700 hover:border-neon-cyan/50 text-xs font-mono flex items-center gap-1.5 transition" title="Restore Saved Scan from IndexedDB">
+            <svg class="w-3.5 h-3.5 text-neon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            <span class="hidden xl:inline">RESTORE DB</span>
+          </button>
+          <button id="btn-open-export" class="px-3 py-1.5 rounded-lg bg-neon-cyan/15 hover:bg-neon-cyan/25 text-neon-cyan border border-neon-cyan/50 text-xs font-mono font-semibold flex items-center gap-1.5 transition shadow-[0_0_12px_rgba(0,240,255,0.15)]">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            <span>EXPORT</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- UNIFIED INGESTION DOCK & DEMO SUITE BAR -->
+  <section class="max-w-[1920px] w-full mx-auto px-4 pt-3 pb-2">
+    <div class="glass-panel rounded-xl p-3 border border-cyan-500/20">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
+        
+        <!-- Drag and Drop Zone -->
+        <div id="drop-zone" class="lg:col-span-5 border-2 border-dashed border-slate-700 hover:border-neon-cyan/70 rounded-lg p-3 transition cursor-pointer bg-obsidian-950/60 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-cyan-950/60 border border-neon-cyan/30 flex items-center justify-center text-neon-cyan shrink-0">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+              </svg>
+            </div>
+            <div>
+              <div class="text-xs font-mono font-semibold text-white flex items-center gap-2">
+                <span>INGEST SOURCE FILES OR REPOSITORY TREE</span>
+                <span id="scan-spinner" class="hidden text-[10px] px-1.5 py-0.5 rounded bg-neon-cyan/20 text-neon-cyan animate-pulse-fast">SCANNING...</span>
+              </div>
+              <p class="text-[11px] text-slate-400 font-mono">
+                Drop files/folders or click • Auto-skips <code class="text-slate-300">node_modules, .git, vendor, target, dist, build, __pycache__, venv</code>
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button id="btn-select-files" type="button" class="px-2.5 py-1.5 rounded bg-obsidian-800 hover:bg-obsidian-700 text-neon-cyan border border-neon-cyan/30 text-xs font-mono transition">
+              + Files
+            </button>
+            <button id="btn-select-folder" type="button" class="px-2.5 py-1.5 rounded bg-obsidian-800 hover:bg-obsidian-700 text-neon-emerald border border-neon-emerald/30 text-xs font-mono transition">
+              + Folder
+            </button>
+            <input id="input-files" type="file" multiple class="hidden" />
+            <input id="input-folder" type="file" webkitdirectory directory multiple class="hidden" />
+          </div>
+        </div>
+
+        <!-- Preloaded Vulnerable Demo Suites -->
+        <div class="lg:col-span-5 flex flex-col justify-center">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-neon-fuchsia"></span>
+              Preloaded Vulnerable Polyglot Suites (Instant Verification):
+            </span>
+            <span id="skipped-counter" class="text-[10px] font-mono text-slate-500">Skipped ignored paths: 0</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+            <button id="btn-preset-all" class="px-2.5 py-1.5 rounded bg-fuchsia-950/60 hover:bg-fuchsia-900/70 border border-neon-fuchsia/50 text-neon-fuchsia text-xs font-mono font-medium transition text-left truncate" title="Load All 11 Languages Complete Vulnerable Benchmark Suite">
+              ⚡ All 11-Lang Omni-Suite
+            </button>
+            <button id="btn-preset-systems" class="px-2.5 py-1.5 rounded bg-obsidian-900 hover:bg-obsidian-700 border border-slate-700 hover:border-neon-cyan/50 text-slate-200 text-xs font-mono transition text-left truncate" title="C, C++, Objective-C, Go, Rust Memory & Pointer Suite">
+              1. C/C++/ObjC/Rust/Go
+            </button>
+            <button id="btn-preset-enterprise" class="px-2.5 py-1.5 rounded bg-obsidian-900 hover:bg-obsidian-700 border border-slate-700 hover:border-neon-cyan/50 text-slate-200 text-xs font-mono transition text-left truncate" title="Java & C# SQLi, Deserialization, XSS & JWT Suite">
+              2. Java/C# Enterprise
+            </button>
+            <button id="btn-preset-webscript" class="px-2.5 py-1.5 rounded bg-obsidian-900 hover:bg-obsidian-700 border border-slate-700 hover:border-neon-cyan/50 text-slate-200 text-xs font-mono transition text-left truncate" title="Python, PHP, Ruby, JS RCE, Prototype Pollution & High-Entropy Secrets">
+              3. Py/PHP/Ruby/JS + Keys
+            </button>
+          </div>
+        </div>
+
+        <!-- Custom Live Snippet Scratchpad & Clear Controls -->
+        <div class="lg:col-span-2 flex items-center justify-end gap-1.5">
+          <button id="btn-open-scratchpad" class="w-full lg:w-auto px-3 py-2 rounded-lg bg-obsidian-900 hover:bg-obsidian-700 border border-neon-cyan/30 text-neon-cyan text-xs font-mono flex items-center justify-center gap-1.5 transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+            <span>+ LIVE CODE</span>
+          </button>
+          <button id="btn-clear-workspace" class="px-2.5 py-2 rounded-lg bg-obsidian-900 hover:bg-red-950/60 border border-slate-800 hover:border-red-500/50 text-slate-400 hover:text-red-300 text-xs font-mono transition" title="Clear Current Scan Results">
+            CLEAR
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Polyglot 11-Language Active Pill Strip -->
+      <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+        <div class="flex flex-wrap items-center gap-1.5" id="lang-pill-strip">
+          <span class="text-slate-500 mr-1">POLYGLOT ROUTER:</span>
+          <!-- Populated dynamically with counts per language -->
+        </div>
+        <div class="flex items-center gap-3 text-slate-400">
+          <span>SHANNON ENTROPY: <strong class="text-neon-emerald">H(X) &ge; 4.15 bits/char</strong></span>
+          <span>SUPPRESSION TAG: <code class="text-neon-cyan bg-obsidian-900 px-1.5 py-0.5 rounded border border-slate-800">polyscan:ignore</code></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN WORKBENCH: 3-PANE SPLIT INSPECTOR -->
+  <main class="flex-1 max-w-[1920px] w-full mx-auto px-4 pb-4 grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-[640px]">
+    
+    <!-- LEFT SIDEBAR: INTERACTIVE FINDINGS LIST & REAL-TIME FILTERS (4 cols) -->
+    <aside class="lg:col-span-4 glass-panel rounded-xl flex flex-col overflow-hidden border border-cyan-500/20 max-h-[78vh]">
+      
+      <!-- Filter Controls Header -->
+      <div class="p-3 border-b border-slate-800 bg-obsidian-950/70 space-y-2">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-mono font-bold uppercase tracking-wider text-neon-cyan flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <span>DETECTION STREAM</span>
+          </h2>
+          <span id="findings-visible-count" class="text-[11px] font-mono px-2 py-0.5 rounded bg-obsidian-800 text-slate-300 border border-slate-700">
+            0 / 0 shown
+          </span>
+        </div>
+
+        <!-- Search & Dropdown Filters -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+          <select id="filter-severity" class="bg-obsidian-900 border border-slate-700 focus:border-neon-cyan rounded px-2 py-1.5 text-xs font-mono text-slate-200 outline-none">
+            <option value="ALL">All Severities</option>
+            <option value="CRITICAL">CRITICAL Only</option>
+            <option value="HIGH">HIGH Only</option>
+            <option value="MEDIUM">MEDIUM Only</option>
+            <option value="LOW">LOW Only</option>
+          </select>
+
+          <select id="filter-language" class="bg-obsidian-900 border border-slate-700 focus:border-neon-cyan rounded px-2 py-1.5 text-xs font-mono text-slate-200 outline-none">
+            <option value="ALL">All 11 Languages</option>
+            <option value="C">C (.c, .h)</option>
+            <option value="C++">C++ (.cpp, .hpp, .cc)</option>
+            <option value="Objective-C">Objective-C (.m, .mm)</option>
+            <option value="Java">Java (.java)</option>
+            <option value="C#">C# (.cs)</option>
+            <option value="Python">Python (.py)</option>
+            <option value="PHP">PHP (.php)</option>
+            <option value="Ruby">Ruby (.rb)</option>
+            <option value="JavaScript">JavaScript (.js, .ts, .jsx)</option>
+            <option value="Go">Go (.go)</option>
+            <option value="Rust">Rust (.rs)</option>
+          </select>
+
+          <input id="filter-cwe" type="text" placeholder="Filter CWE / Rule / File..." class="bg-obsidian-900 border border-slate-700 focus:border-neon-cyan rounded px-2.5 py-1.5 text-xs font-mono text-slate-200 placeholder-slate-500 outline-none" />
+        </div>
+      </div>
+
+      <!-- Findings List Container -->
+      <div id="findings-list" class="flex-1 overflow-y-auto divide-y divide-slate-800/70 p-2 space-y-1.5">
+        <!-- Populated dynamically -->
+      </div>
+
+      <!-- Suppressed Inline Audit Footer -->
+      <div class="px-3 py-2 bg-obsidian-950/90 border-t border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-400">
+        <span>Inline Suppressed (<code class="text-neon-cyan">polyscan:ignore</code>):</span>
+        <span id="hud-suppressed" class="text-neon-emerald font-semibold">0</span>
+      </div>
+    </aside>
+
+    <!-- CENTER & RIGHT/BOTTOM WORKBENCH (8 cols) -->
+    <section class="lg:col-span-8 flex flex-col gap-3 max-h-[78vh]">
+      
+      <!-- CENTER CODE VIEWER WITH CONTEXTUAL HIGHLIGHTING -->
+      <div class="glass-panel rounded-xl flex-1 flex flex-col overflow-hidden border border-cyan-500/20 min-h-[340px]">
+        <!-- File Tab & Coordinates Header -->
+        <div class="px-3.5 py-2.5 border-b border-slate-800 bg-obsidian-950/80 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span id="viewer-lang-badge" class="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/40">
+              READY
+            </span>
+            <span id="viewer-filepath" class="font-mono text-xs text-slate-200 truncate">
+              Select a vulnerability finding or file to inspect source lines...
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <!-- File Switcher Dropdown -->
+            <select id="viewer-file-select" class="bg-obsidian-900 border border-slate-700 rounded px-2 py-1 text-xs font-mono text-slate-300 outline-none max-w-[220px]">
+              <option value="">Jump to Scanned File...</option>
+            </select>
+            <button id="btn-toggle-context" class="px-2.5 py-1 rounded bg-obsidian-900 hover:bg-obsidian-700 border border-slate-700 text-[11px] font-mono text-slate-300 transition" title="Toggle between Focused Context (±2 lines around target) and Full File View">
+              Mode: <span id="context-mode-label" class="text-neon-cyan font-semibold">Full File + ±2 Focus</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Source Code Scroll Container -->
+        <div id="code-viewer-container" class="flex-1 overflow-auto bg-[#060913] font-mono text-xs leading-relaxed select-text">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- BOTTOM REMEDIATION & FORENSICS INSPECTOR PANEL -->
+      <div id="remediation-panel" class="glass-panel rounded-xl p-4 border border-cyan-500/25 bg-obsidian-950/90">
+        <div id="remediation-empty" class="text-center py-6 text-slate-500 font-mono text-xs">
+          Select any finding from the left Detection Stream to inspect CWE/OWASP mappings, Shannon entropy telemetry, and safe remediation code.
+        </div>
+
+        <div id="remediation-content" class="hidden space-y-3">
+          <div class="flex flex-wrap items-start justify-between gap-2 border-b border-slate-800 pb-2.5">
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <span id="rem-severity" class="px-2 py-0.5 rounded text-xs font-mono font-bold">CRITICAL</span>
+                <span id="rem-rule-id" class="px-2 py-0.5 rounded bg-obsidian-800 border border-slate-700 text-neon-cyan text-xs font-mono">RULE-ID</span>
+                <span id="rem-cwe" class="px-2 py-0.5 rounded bg-purple-950/60 border border-purple-500/40 text-purple-300 text-xs font-mono">CWE-000</span>
+                <span id="rem-owasp" class="px-2 py-0.5 rounded bg-emerald-950/60 border border-neon-emerald/40 text-neon-emerald text-xs font-mono">OWASP</span>
+                <span id="rem-entropy-badge" class="hidden px-2 py-0.5 rounded bg-amber-950/70 border border-neon-amber/50 text-neon-amber text-xs font-mono">H(X) = 0.00 bits</span>
+              </div>
+              <h3 id="rem-title" class="text-sm font-bold text-white mt-1.5 font-sans">Vulnerability Title</h3>
+            </div>
+            <div class="text-right font-mono text-xs text-slate-400">
+              <div>FILE: <strong id="rem-coords" class="text-neon-cyan">path:line:col</strong></div>
+              <div class="text-[11px] text-slate-500">Contextual Window: <span id="rem-window-range">Lines 0–0</span></div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <!-- Description & Risk Analysis -->
+            <div class="space-y-2">
+              <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400">Technical Vulnerability Analysis</div>
+              <p id="rem-description" class="text-xs text-slate-300 leading-relaxed bg-obsidian-900/90 p-3 rounded-lg border border-slate-800"></p>
+              <div class="flex items-center justify-between text-[11px] font-mono bg-obsidian-900/60 px-3 py-1.5 rounded border border-slate-800/80">
+                <span class="text-slate-400">Matched Token / Sink:</span>
+                <code id="rem-match" class="text-neon-fuchsia font-semibold truncate max-w-[280px]"></code>
+              </div>
+            </div>
+
+            <!-- Safe Replacement Remediation Code -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-mono uppercase tracking-wider text-neon-emerald flex items-center gap-1.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  Recommended Safe Replacement Pattern
+                </span>
+                <button id="btn-copy-remediation" class="px-2 py-0.5 rounded bg-obsidian-800 hover:bg-obsidian-700 text-neon-cyan border border-neon-cyan/30 text-[11px] font-mono transition">
+                  Copy Fix
+                </button>
+              </div>
+              <pre id="rem-fix-code" class="bg-[#050811] text-neon-emerald border border-neon-emerald/30 rounded-lg p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- MODAL 1: MULTI-FORMAT EXPORT ENGINE (SARIF 2.1.0, JSON, MARKDOWN) -->
+  <div id="modal-export" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-panel rounded-xl max-w-4xl w-full border border-neon-cyan/40 shadow-2xl overflow-hidden flex flex-col max-h-[88vh]">
+      <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-obsidian-950">
+        <div class="flex items-center gap-2.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-neon-cyan"></span>
+          <h3 class="font-mono font-bold text-sm text-white uppercase tracking-wider">Multi-Format Audit &amp; SARIF 2.1.0 Export Engine</h3>
+        </div>
+        <button id="btn-close-export" class="text-slate-400 hover:text-white font-mono text-sm px-2 py-0.5 rounded border border-transparent hover:border-slate-700">✕ ESC</button>
+      </div>
+
+      <div class="p-4 space-y-3 flex-1 overflow-y-auto">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <button data-format="sarif" class="export-tab-btn px-3 py-1.5 rounded-lg font-mono text-xs font-semibold bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/50">
+              SARIF 2.1.0 (GitHub Code Scanning)
+            </button>
+            <button data-format="json" class="export-tab-btn px-3 py-1.5 rounded-lg font-mono text-xs bg-obsidian-900 text-slate-300 border border-slate-700 hover:border-neon-cyan/40">
+              Structured JSON Report
+            </button>
+            <button data-format="markdown" class="export-tab-btn px-3 py-1.5 rounded-lg font-mono text-xs bg-obsidian-900 text-slate-300 border border-slate-700 hover:border-neon-cyan/40">
+              Executive Markdown (.md)
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button id="btn-copy-export" class="px-3 py-1.5 rounded-lg bg-obsidian-800 hover:bg-obsidian-700 text-neon-emerald border border-neon-emerald/40 font-mono text-xs transition">
+              Copy to Clipboard
+            </button>
+            <button id="btn-download-export" class="px-3.5 py-1.5 rounded-lg bg-neon-cyan text-obsidian-950 font-mono text-xs font-bold hover:opacity-90 transition">
+              Download File
+            </button>
+          </div>
+        </div>
+
+        <textarea id="export-preview-area" readonly class="w-full h-[380px] bg-[#04060c] border border-slate-800 rounded-lg p-3.5 font-mono text-xs text-slate-200 outline-none resize-none"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: DETERMINISTIC VULNERABILITY & SECRET MATRIX VIEWER -->
+  <div id="modal-rules" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-panel rounded-xl max-w-5xl w-full border border-neon-cyan/40 shadow-2xl overflow-hidden flex flex-col max-h-[88vh]">
+      <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-obsidian-950">
+        <div class="flex items-center gap-2.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-neon-emerald"></span>
+          <h3 class="font-mono font-bold text-sm text-white uppercase tracking-wider">Deterministic Polyglot Security &amp; Secret Matrix</h3>
+        </div>
+        <button id="btn-close-rules" class="text-slate-400 hover:text-white font-mono text-sm px-2 py-0.5 rounded border border-transparent hover:border-slate-700">✕ ESC</button>
+      </div>
+      <div class="p-4 overflow-y-auto space-y-2" id="rules-matrix-table">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: LIVE SNIPPET SCRATCHPAD INJECTOR -->
+  <div id="modal-scratchpad" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-panel rounded-xl max-w-3xl w-full border border-neon-cyan/40 shadow-2xl overflow-hidden flex flex-col">
+      <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-obsidian-950">
+        <div class="flex items-center gap-2.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-neon-fuchsia"></span>
+          <h3 class="font-mono font-bold text-sm text-white uppercase tracking-wider">Inject Custom Source File into Workbench</h3>
+        </div>
+        <button id="btn-close-scratchpad" class="text-slate-400 hover:text-white font-mono text-sm px-2 py-0.5 rounded border border-transparent hover:border-slate-700">✕ ESC</button>
+      </div>
+      <div class="p-4 space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-mono text-slate-400 mb-1">VIRTUAL FILE PATH &amp; EXTENSION</label>
+            <input id="scratch-filename" type="text" value="custom_audit/auth_handler.py" class="w-full bg-obsidian-900 border border-slate-700 rounded px-3 py-1.5 text-xs font-mono text-white outline-none focus:border-neon-cyan" />
+          </div>
+          <div class="flex items-end">
+            <p class="text-[11px] font-mono text-slate-400">
+              Supported: <code class="text-neon-cyan">.java .c .cpp .m .cs .py .js .php .go .rs .rb</code>
+            </p>
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-slate-400 mb-1">SOURCE CODE (Try adding <code class="text-neon-cyan"># polyscan:ignore</code> or <code class="text-neon-cyan">// polyscan:ignore</code> to test suppression)</label>
+          <textarea id="scratch-code" rows="11" class="w-full bg-[#04060c] border border-slate-800 rounded-lg p-3 font-mono text-xs text-slate-200 outline-none focus:border-neon-cyan">import os, subprocess
+
+# High-entropy production secret assignment
+AWS_PRODUCTION_SECRET = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY99"
+
+def run_backup(user_archive_name):
+    # Vulnerable command execution via shell
+    subprocess.Popen("tar -czf /tmp/backup.tar.gz " + user_archive_name, shell=True)
+    # Suppressed line below will be ignored by scanner:
+    eval(user_archive_name) # polyscan:ignore
+</textarea>
+        </div>
+        <div class="flex justify-end gap-2">
+          <button id="btn-scan-scratchpad" class="px-4 py-2 rounded-lg bg-neon-cyan text-obsidian-950 font-mono text-xs font-bold hover:opacity-90 transition">
+            SCAN &amp; APPEND TO WORKBENCH
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING TOAST NOTIFICATION STACK -->
+  <div id="toast-stack" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+  <!-- APPLICATION & WEB WORKER ENGINE -->
+  <script>
+    /*************************************************************************
+     * 1. POLYGLOT EXTENSION ROUTER & SKIP LIST CONFIGURATION
+     *************************************************************************/
+    const TARGET_LANGUAGES = [
+      'Java', 'C', 'C++', 'Objective-C', 'C#', 'Python', 'JavaScript', 'PHP', 'Go', 'Rust', 'Ruby'
+    ];
+
+    const EXTENSION_MAP = {
+      '.java': 'Java',
+      '.c': 'C',
+      '.h': 'C',
+      '.cpp': 'C++',
+      '.cc': 'C++',
+      '.cxx': 'C++',
+      '.hpp': 'C++',
+      '.hh': 'C++',
+      '.m': 'Objective-C',
+      '.mm': 'Objective-C',
+      '.cs': 'C#',
+      '.py': 'Python',
+      '.js': 'JavaScript',
+      '.jsx': 'JavaScript',
+      '.ts': 'JavaScript',
+      '.tsx': 'JavaScript',
+      '.mjs': 'JavaScript',
+      '.php': 'PHP',
+      '.phtml': 'PHP',
+      '.go': 'Go',
+      '.rs': 'Rust',
+      '.rb': 'Ruby'
+    };
+
+    const IGNORED_DIRECTORIES = [
+      'node_modules', '.git', 'vendor', 'target', 'dist', 'build', '__pycache__', 'venv', '.venv', '.idea', '.vscode', 'bin', 'obj'
+    ];
+
+    /*************************************************************************
+     * 2. DETERMINISTIC VULNERABILITY & SECRET MATRIX (ALL 11 LANGUAGES)
+     *************************************************************************/
+    const SECURITY_RULES = [
+      // ================= UNIVERSAL CREDENTIALS & SECRETS =================
+      {
+        id: 'SEC-AWS-001',
+        title: 'Hardcoded AWS Access Key ID or Secret Key',
+        severity: 'CRITICAL',
+        cwe: 'CWE-798',
+        owasp: 'A07:2021-Identification and Authentication Failures',
+        languages: ['*'],
+        pattern: '(?:AKIA[0-9A-Z]{16}|aws_secret_access_key\\s*[:=]\\s*["\'][A-Za-z0-9/+=]{30,}["\'])',
+        flags: 'gi',
+        description: 'Detects hardcoded Amazon Web Services (AWS) Access Key IDs (AKIA...) or Secret Access Keys directly embedded in source code, enabling immediate cloud account compromise.',
+        remediation: '// Load credentials from IAM roles or environment variables:\nconst awsKey = process.env.AWS_ACCESS_KEY_ID;'
+      },
+      {
+        id: 'SEC-STRIPE-002',
+        title: 'Live Stripe Secret or Restricted API Token',
+        severity: 'CRITICAL',
+        cwe: 'CWE-798',
+        owasp: 'A02:2021-Cryptographic Failures',
+        languages: ['*'],
+        pattern: '\\b(?:sk_live_|rk_live_)[0-9a-zA-Z]{20,}\\b',
+        flags: 'g',
+        description: 'Detects production Stripe secret (`sk_live_`) or restricted (`rk_live_`) API keys that grant direct financial charge and refund privileges.',
+        remediation: '// Store payment gateway keys in a secrets manager (Vault / KMS):\nSTRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")'
+      },
+      {
+        id: 'SEC-GITHUB-003',
+        title: 'GitHub Personal Access Token (PAT) or OAuth Token',
+        severity: 'CRITICAL',
+        cwe: 'CWE-798',
+        owasp: 'A07:2021-Identification and Authentication Failures',
+        languages: ['*'],
+        pattern: '\\b(?:ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{50,}|gho_[A-Za-z0-9]{36}|ghs_[A-Za-z0-9]{36})\\b',
+        flags: 'g',
+        description: 'Hardcoded GitHub Personal Access Token detected. Attackers can clone private repositories, poison CI/CD pipelines, or push malicious releases.',
+        remediation: '// Inject GitHub tokens strictly via ephemeral CI/CD runners:\nexport GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"'
+      },
+      {
+        id: 'SEC-PRIVKEY-004',
+        title: 'Embedded Asymmetric Private Key Block (RSA/EC/DSA/OPENSSH)',
+        severity: 'CRITICAL',
+        cwe: 'CWE-321',
+        owasp: 'A02:2021-Cryptographic Failures',
+        languages: ['*'],
+        pattern: '-----BEGIN\\s+(?:RSA\\s+|EC\\s+|DSA\\s+|OPENSSH\\s+|PGP\\s+)?PRIVATE\\s+KEY-----',
+        flags: 'gi',
+        description: 'An unencrypted PEM/OpenSSH private cryptographic key header is embedded directly in source code.',
+        remediation: '// Load private keys from mounted HSM or restricted PKCS#11 keystores outside the repository.'
+      },
+      {
+        id: 'SEC-JWT-005',
+        title: 'Hardcoded JSON Web Token (JWT) Bearer Artifact',
+        severity: 'HIGH',
+        cwe: 'CWE-522',
+        owasp: 'A07:2021-Identification and Authentication Failures',
+        languages: ['*'],
+        pattern: '\\beyJ[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\b',
+        flags: 'g',
+        description: 'Static signed JSON Web Token (JWT) found in source code. May allow session replay or privilege escalation if non-expiring.',
+        remediation: '// Generate short-lived JWTs dynamically at runtime during authentication handshakes.'
+      },
+
+      // ================= C / C++ / OBJECTIVE-C RULES =================
+      {
+        id: 'MEM-C-101',
+        title: 'Unbounded Stack/Heap Buffer Copy (strcpy / strcat / gets)',
+        severity: 'CRITICAL',
+        cwe: 'CWE-120',
+        owasp: 'A06:2021-Vulnerable and Outdated Components',
+        languages: ['C', 'C++', 'Objective-C'],
+        pattern: '\\b(?:strcpy|strcat|gets)\\s*\\(',
+        flags: 'g',
+        description: 'Classic unbounded memory copy functions (`strcpy`, `strcat`, `gets`) do not check destination buffer capacity, allowing stack or heap buffer overflows and arbitrary code execution.',
+        remediation: '// Use explicit bounds-checked alternatives:\nstrncpy(dest, src, sizeof(dest) - 1);\ndest[sizeof(dest) - 1] = \'\\0\';\n// Or fgets(buf, sizeof(buf), stdin);'
+      },
+      {
+        id: 'MEM-C-102',
+        title: 'Unbounded Formatted String Buffer Write (sprintf / vsprintf)',
+        severity: 'HIGH',
+        cwe: 'CWE-120',
+        owasp: 'A04:2021-Insecure Design',
+        languages: ['C', 'C++', 'Objective-C'],
+        pattern: '\\b(?:sprintf|vsprintf)\\s*\\(',
+        flags: 'g',
+        description: '`sprintf` and `vsprintf` write formatted data into a buffer without verifying its length, risking memory corruption.',
+        remediation: '// Replace sprintf with length-bounded snprintf:\nsnprintf(buffer, sizeof(buffer), "%s", userInput);'
+      },
+      {
+        id: 'MEM-C-103',
+        title: 'Format String Vulnerability (Externally Controlled Format Specifier)',
+        severity: 'CRITICAL',
+        cwe: 'CWE-134',
+        owasp: 'A03:2021-Injection',
+        languages: ['C', 'C++', 'Objective-C'],
+        pattern: '\\b(?:printf|syslog|NSLog)\\s*\\(\\s*[a-zA-Z_][a-zA-Z0-9_]*\\s*\\)',
+        flags: 'g',
+        description: 'Passing a variable directly as the first argument to `printf`, `syslog`, or `NSLog` allows attackers to inject `%x` or `%n` specifiers to read stack memory or overwrite arbitrary addresses.',
+        remediation: '// Always supply a static literal format string:\nprintf("%s", userInput);\nNSLog(@"%@", userString);'
+      },
+      {
+        id: 'MEM-C-104',
+        title: 'Potential Use-After-Free / Double-Free Pointer Anti-Pattern',
+        severity: 'HIGH',
+        cwe: 'CWE-416',
+        owasp: 'A04:2021-Insecure Design',
+        languages: ['C', 'C++', 'Objective-C'],
+        pattern: '\\bfree\\s*\\(\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\)\\s*;\\s*(?:\\1\\s*(?:->|\\[|=)|free\\s*\\(\\s*\\1\\s*\\))',
+        flags: 'g',
+        description: 'Pointer is dereferenced, mutated, or freed a second time immediately following `free(ptr)` without nullification (`ptr = NULL;`), causing heap corruption or Use-After-Free.',
+        remediation: 'free(ptr);\nptr = NULL; // Immediately nullify freed pointers or use std::unique_ptr<T>'
+      },
+
+      // ================= JAVA / C# ENTERPRISE RULES =================
+      {
+        id: 'INJ-JVMCS-201',
+        title: 'Dynamic SQL Injection via String Concatenation',
+        severity: 'CRITICAL',
+        cwe: 'CWE-89',
+        owasp: 'A03:2021-Injection',
+        languages: ['Java', 'C#'],
+        pattern: '(?:executeQuery|executeUpdate|prepareStatement|SqlCommand|FromSqlRaw|ExecuteSqlRaw)\\s*\\(\\s*["\'][^"\']*(?:SELECT|INSERT|UPDATE|DELETE)[^"\']*["\']\\s*\\+',
+        flags: 'gi',
+        description: 'SQL query string is dynamically constructed using string concatenation (`+`) with untrusted variables before execution, enabling authentication bypass and data exfiltration.',
+        remediation: '// Java PreparedStatement:\nPreparedStatement ps = conn.prepareStatement("SELECT * FROM users WHERE id = ?");\nps.setString(1, userId);\n// C# Parameterized SqlCommand:\ncmd.Parameters.AddWithValue("@id", userId);'
+      },
+      {
+        id: 'DESER-JVMCS-202',
+        title: 'Insecure Native Object Deserialization (readObject / BinaryFormatter)',
+        severity: 'CRITICAL',
+        cwe: 'CWE-502',
+        owasp: 'A08:2021-Software and Data Integrity Failures',
+        languages: ['Java', 'C#'],
+        pattern: '\\b(?:ObjectInputStream|readObject\\s*\\(|BinaryFormatter|NetDataContractSerializer|LosFormatter|SoapFormatter)\\b',
+        flags: 'g',
+        description: 'Untrusted native stream deserialization (`ObjectInputStream.readObject` in Java or `BinaryFormatter.Deserialize` in .NET) leads directly to Remote Code Execution (RCE) via gadget chains.',
+        remediation: '// Use safe structured data formats (JSON/Protobuf) with strict schema binding:\nObjectMapper mapper = new ObjectMapper();\nSafeDto dto = mapper.readValue(jsonInput, SafeDto.class);'
+      },
+      {
+        id: 'XSS-JVMCS-203',
+        title: 'Unescaped Server-Side HTTP Response Writer (Reflected XSS)',
+        severity: 'HIGH',
+        cwe: 'CWE-79',
+        owasp: 'A03:2021-Injection',
+        languages: ['Java', 'C#'],
+        pattern: '(?:response\\.getWriter\\(\\)\\.(?:write|print|println)|Response\\.Write|Html\\.Raw)\\s*\\(\\s*[^"\')]+\\)',
+        flags: 'g',
+        description: 'Writing unencoded user-controlled strings directly into the HTTP response stream (`response.getWriter().write(...)` or `Html.Raw(...)`) enables Reflected/Stored Cross-Site Scripting (XSS).',
+        remediation: '// Encode output for HTML context before writing:\nresponse.getWriter().write(Encode.forHtml(untrustedInput));'
+      },
+
+      // ================= PYTHON / PHP / RUBY SCRIPTING RULES =================
+      {
+        id: 'RCE-SCRIPT-301',
+        title: 'OS Command Injection Sink (os.system / subprocess shell=True / system / exec)',
+        severity: 'CRITICAL',
+        cwe: 'CWE-78',
+        owasp: 'A03:2021-Injection',
+        languages: ['Python', 'PHP', 'Ruby'],
+        pattern: '(?:os\\.system|os\\.popen|subprocess\\.(?:Popen|call|run|check_output)\\s*\\([^)]*shell\\s*=\\s*True|\\b(?:shell_exec|passthru|proc_open|system|exec)\\s*\\(\\s*[$a-zA-Z_])',
+        flags: 'g',
+        description: 'Invoking operating system shells with dynamic user arguments allows attackers to chain arbitrary shell commands (`; rm -rf /`, `| nc ...`).',
+        remediation: '# Pass argument arrays with shell=False:\nsubprocess.run(["/usr/bin/tar", "-czf", archive_path, target_dir], shell=False, check=True)'
+      },
+      {
+        id: 'RCE-SCRIPT-302',
+        title: 'Arbitrary Dynamic Code Execution (eval / assert / Kernel.eval / Marshal.load)',
+        severity: 'CRITICAL',
+        cwe: 'CWE-95',
+        owasp: 'A03:2021-Injection',
+        languages: ['Python', 'PHP', 'Ruby'],
+        pattern: '\\b(?:eval|Kernel\\.eval|instance_eval|class_eval|Marshal\\.load|pickle\\.loads|yaml\\.unsafe_load|unserialize)\\s*\\(',
+        flags: 'g',
+        description: 'Dynamic code evaluation (`eval`) or unsafe object deserialization (`pickle.loads`, `Marshal.load`, PHP `unserialize`) executes arbitrary attacker-supplied payloads.',
+        remediation: '# Use safe parsers only:\nimport ast, json\ndata = json.loads(raw_payload) # or ast.literal_eval()'
+      },
+      {
+        id: 'XXE-SCRIPT-303',
+        title: 'XML External Entity (XXE) Resolution Enabled',
+        severity: 'HIGH',
+        cwe: 'CWE-611',
+        owasp: 'A05:2021-Security Misconfiguration',
+        languages: ['Python', 'PHP', 'Ruby'],
+        pattern: '(?:resolve_entities\\s*=\\s*True|LIBXML_NOENT|LIBXML_DTDLOAD|REXML::Document\\.new)',
+        flags: 'g',
+        description: 'XML parser is configured to expand external entities (`resolve_entities=True` or `LIBXML_NOENT`), enabling local file disclosure (`/etc/passwd`) and SSRF.',
+        remediation: '# Python defusedxml or disable entity expansion:\nfrom defusedxml.ElementTree import fromstring\nparser = etree.XMLParser(resolve_entities=False, no_network=True)'
+      },
+
+      // ================= GO / RUST SYSTEMS SAFETY RULES =================
+      {
+        id: 'ERR-GO-401',
+        title: 'Ignored Security-Critical Error Return (`_ = ...`)',
+        severity: 'MEDIUM',
+        cwe: 'CWE-252',
+        owasp: 'A04:2021-Insecure Design',
+        languages: ['Go'],
+        pattern: '\\b_\\s*(?:,[a-zA-Z0-9_\\s]*)?:?=\\s*[a-zA-Z0-9_.]+\\.(?:Write|Read|Close|Verify|Decrypt|SetDeadline|Chmod|Chown)\\s*\\(',
+        flags: 'g',
+        description: 'Explicitly discarding error return values (`_ = ...`) on I/O, cryptographic verification, or permission calls can cause silent security failures.',
+        remediation: 'if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {\n    return fmt.Errorf("deadline failure: %w", err)\n}'
+      },
+      {
+        id: 'MEM-GO-402',
+        title: 'Bypassing Go Type Safety via `unsafe.Pointer`',
+        severity: 'HIGH',
+        cwe: 'CWE-787',
+        owasp: 'A04:2021-Insecure Design',
+        languages: ['Go'],
+        pattern: '\\bunsafe\\.Pointer\\s*\\(',
+        flags: 'g',
+        description: 'Use of `unsafe.Pointer` bypasses Go memory safety and garbage collector invariants, introducing memory corruption risks.',
+        remediation: '// Avoid unsafe.Pointer casts; use encoding/binary or safe slice operations.'
+      },
+      {
+        id: 'MEM-RUST-403',
+        title: 'Rust `unsafe` Block or `std::mem::transmute` Invocation',
+        severity: 'HIGH',
+        cwe: 'CWE-119',
+        owasp: 'A04:2021-Insecure Design',
+        languages: ['Rust'],
+        pattern: '(?:\\bunsafe\\s*\\{|\\bmem::transmute\\b|\\bstd::ptr::(?:read|write)_unaligned\\b)',
+        flags: 'g',
+        description: 'Rust `unsafe` block or `mem::transmute` opts out of borrow-checker guarantees, risking undefined behavior (UB), dangling pointers, or type confusion.',
+        remediation: '// Encapsulate invariants or replace mem::transmute with safe TryFrom / From traits.'
+      },
+      {
+        id: 'DOS-RUST-404',
+        title: 'Unchecked Panic via `.unwrap()` on Production Result/Option',
+        severity: 'MEDIUM',
+        cwe: 'CWE-248',
+        owasp: 'A05:2021-Security Misconfiguration',
+        languages: ['Rust'],
+        pattern: '\\.unwrap\\s*\\(\\s*\\)',
+        flags: 'g',
+        description: 'Calling `.unwrap()` on a `Result` or `Option` triggers an immediate thread panic on malformed user input, causing Denial of Service (DoS).',
+        remediation: '// Propagate errors gracefully using the ? operator or match:\nlet config = parse_input(raw).map_err(|e| AppError::InvalidInput(e))?;'
+      },
+
+      // ================= JAVASCRIPT / TYPESCRIPT WEB RULES =================
+      {
+        id: 'XSS-JS-501',
+        title: 'DOM-Based Cross-Site Scripting (innerHTML / outerHTML / document.write)',
+        severity: 'HIGH',
+        cwe: 'CWE-79',
+        owasp: 'A03:2021-Injection',
+        languages: ['JavaScript'],
+        pattern: '(?:\\.(?:innerHTML|outerHTML)\\s*=\\s*[^"\'`\\s;]+|\\bdocument\\.(?:write|writeln)\\s*\\(|\\.insertAdjacentHTML\\s*\\()',
+        flags: 'g',
+        description: 'Assigning untrusted data to `.innerHTML`, `.outerHTML`, or `document.write()` parses and executes injected `<script>` or `onerror=` handlers in the victim browser.',
+        remediation: '// Use textContent or DOMPurify sanitization:\nelement.textContent = untrustedInput;'
+      },
+      {
+        id: 'RCE-JS-502',
+        title: 'Dynamic Code Execution via `eval()` or `new Function()`',
+        severity: 'CRITICAL',
+        cwe: 'CWE-95',
+        owasp: 'A03:2021-Injection',
+        languages: ['JavaScript'],
+        pattern: '\\b(?:eval\\s*\\(|new\\s+Function\\s*\\(|setTimeout\\s*\\(\\s*["\'])',
+        flags: 'g',
+        description: 'Executing dynamic JavaScript strings via `eval()` or `new Function()` opens the application to arbitrary script injection and SSRF/RCE in Node environments.',
+        remediation: '// Parse structured JSON safely:\nconst parsed = JSON.parse(rawPayload);'
+      },
+      {
+        id: 'PROTO-JS-503',
+        title: 'Prototype Pollution Vector (`__proto__` / `constructor.prototype`)',
+        severity: 'HIGH',
+        cwe: 'CWE-1321',
+        owasp: 'A08:2021-Software and Data Integrity Failures',
+        languages: ['JavaScript'],
+        pattern: '(?:__proto__|constructor\\s*\\.\\s*prototype|\\bObject\\.assign\\s*\\(\\s*\\{\\}\\s*,\\s*req\\.(?:body|query))',
+        flags: 'g',
+        description: 'Unvalidated recursive merge or direct mutation of `__proto__` / `constructor.prototype` allows attackers to pollute `Object.prototype` properties across the runtime.',
+        remediation: '// Create prototype-less dictionaries and reject dangerous keys:\nconst safeMap = Object.create(null);\nif (key === "__proto__" || key === "constructor" || key === "prototype") return;'
+      }
+    ];
+
+    /*************************************************************************
+     * 3. PRELOADED VULNERABLE POLYGLOT DEMO SUITES (ALL 11 LANGUAGES)
+     *************************************************************************/
+    const DEMO_PRESETS = {
+      systems: [
+        {
+          path: 'firmware/packet_decoder.c',
+          language: 'C',
+          content: `#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Firmware Telemetry Packet Decoder (C)
+void process_telemetry_frame(char *untrusted_payload) {
+    char frame_buf[64];
+    char audit_msg[128];
+
+    // [VULN 1] Unbounded stack buffer copy (CWE-120)
+    strcpy(frame_buf, untrusted_payload);
+
+    // [VULN 2] Unbounded sprintf write (CWE-120)
+    sprintf(audit_msg, "Frame decoded: %s", frame_buf);
+
+    // [VULN 3] Externally controlled format string (CWE-134)
+    printf(untrusted_payload);
+
+    // Inline suppression example (ignored by scanner):
+    gets(frame_buf); // polyscan:ignore
+}`
+        },
+        {
+          path: 'engine/session_cache.cpp',
+          language: 'C++',
+          content: `#include <cstdlib>
+#include <cstdio>
+
+struct SessionNode {
+    int privilege_level;
+    char token[32];
+};
+
+void teardown_session(SessionNode* node, const char* raw_log) {
+    /* Multi-line comment block containing fake code that must be stripped:
+       strcpy(node->token, raw_log);
+       printf(raw_log);
+    */
+    free(node);
+    // [VULN 1] Use-After-Free dereference immediately after free() (CWE-416)
+    node->privilege_level = 0;
+
+    // [VULN 2] Format string vulnerability in C++ logger
+    syslog(raw_log);
+}`
+        },
+        {
+          path: 'ios_client/KeychainBridge.m',
+          language: 'Objective-C',
+          content: `#import <Foundation/Foundation.h>
+
+@implementation KeychainBridge
+- (void)syncCloudToken:(NSString *)userLogInput cString:(const char *)rawCString {
+    char localBuffer[32];
+    // [VULN 1] Buffer overflow in Objective-C C-bridge
+    strcat(localBuffer, rawCString);
+
+    // [VULN 2] Format string vulnerability via NSLog
+    NSLog(userLogInput);
+}
+@end`
+        },
+        {
+          path: 'gateway/tls_proxy.go',
+          language: 'Go',
+          content: `package main
+
+import (
+    "net"
+    "unsafe"
+)
+
+func handleClientConn(conn net.Conn, rawHeader []byte) {
+    // [VULN 1] Explicitly ignored security-critical error return (CWE-252)
+    _ = conn.SetDeadline(nil)
+    _ = conn.Write(rawHeader)
+
+    // [VULN 2] Bypassing Go type safety via unsafe.Pointer (CWE-787)
+    headerPtr := unsafe.Pointer(&rawHeader[0])
+    _ = headerPtr
+}`
+        },
+        {
+          path: 'crypto_core/ffi_enclave.rs',
+          language: 'Rust',
+          content: `use std::mem;
+
+pub fn decode_enclave_header(raw_bytes: [u8; 8], maybe_token: Option<&str>) -> u64 {
+    // [VULN 1] Production panic DoS via .unwrap() (CWE-248)
+    let active_token = maybe_token.unwrap();
+    println!("Token length: {}", active_token.len());
+
+    // [VULN 2] Unsafe block & mem::transmute bypassing Rust borrow checker (CWE-119)
+    unsafe {
+        let transmuted_val: u64 = mem::transmute(raw_bytes);
+        transmuted_val
+    }
+}`
+        }
+      ],
+
+      enterprise: [
+        {
+          path: 'services/OrderRepository.java',
+          language: 'Java',
+          content: `package com.acme.security.services;
+
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.sql.Connection;
+import java.sql.Statement;
+import javax.servlet.http.HttpServletResponse;
+
+public class OrderRepository {
+    // [VULN 1] Hardcoded Production JWT Bearer Token (CWE-522)
+    private static final String SERVICE_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbi1zZXJ2aWNlIiwicm9sZSI6InN1cGVydXNlciJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+
+    public void lookupCustomerOrder(Connection conn, String customerInput, InputStream serializedBlob, HttpServletResponse response) throws Exception {
+        Statement stmt = conn.createStatement();
+
+        // [VULN 2] Dynamic SQL Injection via string concatenation (CWE-89)
+        stmt.executeQuery("SELECT * FROM orders WHERE customer_id = '" + customerInput + "'");
+
+        // [VULN 3] Insecure Java Native Object Deserialization (CWE-502)
+        ObjectInputStream ois = new ObjectInputStream(serializedBlob);
+        Object restoredSession = ois.readObject();
+
+        // [VULN 4] Unescaped XSS writer in Servlet response (CWE-79)
+        response.getWriter().println(customerInput);
+    }
+}`
+        },
+        {
+          path: 'controllers/LegacyAccountController.cs',
+          language: 'C#',
+          content: `using System;
+using System.Data.SqlClient;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
+
+namespace EnterprisePortal.Controllers {
+    public class LegacyAccountController {
+        public void ProcessAuditRequest(SqlConnection db, string searchAccount, Stream bodyStream) {
+            // [VULN 1] SQL Injection in SqlCommand construction (CWE-89)
+            var cmd = new SqlCommand("DELETE FROM AuditLogs WHERE AccountName = '" + searchAccount + "'", db);
+            cmd.ExecuteNonQuery();
+
+            // [VULN 2] Insecure .NET BinaryFormatter deserialization (CWE-502)
+            BinaryFormatter formatter = new BinaryFormatter();
+            var profile = formatter.Deserialize(bodyStream);
+
+            // Suppressed SQL query for legacy migration test:
+            var safeCmd = new SqlCommand("SELECT * FROM Dual WHERE x = '" + searchAccount, db); // polyscan:ignore
+        }
+    }
+}`
+        }
+      ],
+
+      webscript: [
+        {
+          path: 'automation/cloud_deployer.py',
+          language: 'Python',
+          content: `import os
+import subprocess
+import pickle
+from lxml import etree
+
+# [VULN 1] Hardcoded AWS Access Key ID (CWE-798)
+AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"
+
+# [VULN 2] High-Entropy Secret Assignment caught by Shannon Entropy Engine
+CLOUDFLARE_MASTER_API_TOKEN = "9xK#mP2$vL8@nQ5!zR7&wY4*tB1^cF6%hJ3"
+
+def deploy_container(image_tag, raw_xml_manifest, cached_state):
+    # [VULN 3] OS Command Injection via shell=True (CWE-78)
+    subprocess.Popen("docker pull " + image_tag, shell=True)
+
+    # [VULN 4] Unsafe pickle deserialization (CWE-95)
+    session_obj = pickle.loads(cached_state)
+
+    # [VULN 5] XML External Entity (XXE) resolution enabled (CWE-611)
+    parser = etree.XMLParser(resolve_entities=True)
+    tree = etree.fromstring(raw_xml_manifest, parser=parser)
+    return session_obj`
+        },
+        {
+          path: 'billing/webhook_processor.php',
+          language: 'PHP',
+          content: `<?php
+// Billing Webhook Handler (PHP)
+
+// [VULN 1] Live Stripe Secret API Key (CWE-798)
+$STRIPE_LIVE_SECRET = "sk_live_51Nz8YpL9kQm2XvR7tB4wK1cF8hJ6nM3pQ0aZ9xV2";
+
+function handleDiagnosticPing($clientHost, $serializedPrefs) {
+    // [VULN 2] OS Command Injection via shell_exec (CWE-78)
+    $output = shell_exec("ping -c 3 " . $clientHost);
+
+    // [VULN 3] Insecure PHP Object Unserialize (CWE-502 / CWE-95)
+    $prefs = unserialize($serializedPrefs);
+
+    // [VULN 4] Arbitrary eval execution
+    eval($clientHost);
+    return $output;
+}
+?>`
+        },
+        {
+          path: 'workers/report_runner.rb',
+          language: 'Ruby',
+          content: `# Ruby Background Report Worker
+require 'rexml/document'
+
+# [VULN 1] Hardcoded GitHub Personal Access Token (CWE-798)
+GITHUB_DEPLOY_PAT = "ghp_a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8"
+
+def generate_pdf_report(user_template_expr, marshaled_user)
+  # [VULN 2] Arbitrary code execution via Kernel.eval (CWE-95)
+  Kernel.eval(user_template_expr)
+
+  # [VULN 3] Unsafe Marshal.load deserialization (CWE-502)
+  user_record = Marshal.load(marshaled_user)
+
+  # [VULN 4] Subshell command injection (CWE-78)
+  system("wkhtmltopdf " + user_template_expr)
+end`
+        },
+        {
+          path: 'frontend/widget_renderer.js',
+          language: 'JavaScript',
+          content: `// Client Widget Renderer (JavaScript)
+
+const EMBEDDED_SSH_KEY = "-----BEGIN OPENSSH PRIVATE KEY-----";
+
+export function renderDynamicBanner(targetNode, userHtmlWidget, rawConfigJson, protoKey, protoVal) {
+    // [VULN 1] DOM-based XSS via innerHTML assignment (CWE-79)
+    targetNode.innerHTML = userHtmlWidget;
+
+    // [VULN 2] Dynamic code evaluation via eval() (CWE-95)
+    const computedTheme = eval("(" + rawConfigJson + ")");
+
+    // [VULN 3] Prototype Pollution vector via __proto__ (CWE-1321)
+    const mergedOptions = {};
+    mergedOptions.__proto__[protoKey] = protoVal;
+    return computedTheme;
+}`
+        }
+      ]
+    };
+
+    /*************************************************************************
+     * 4. INLINE WEB WORKER SOURCE (100% CLIENT-SIDE ZERO-EGRESS ENGINE)
+     *************************************************************************/
+    const WORKER_SOURCE = `
+      // Web Worker: Comment Stripping, Inline Suppression, Regex Matrix & Shannon Entropy
+      function calculateShannonEntropy(str) {
+        if (!str || str.length === 0) return 0;
+        const freq = {};
+        for (let i = 0; i < str.length; i++) {
+          const ch = str[i];
+          freq[ch] = (freq[ch] || 0) + 1;
+        }
+        let entropy = 0;
+        const len = str.length;
+        for (const ch in freq) {
+          const p = freq[ch] / len;
+          entropy -= p * Math.log2(p);
+        }
+        return entropy;
+      }
+
+      // Strips /* ... */ and // or # comments while strictly preserving line numbers and column offsets
+      function stripCommentsPreservingLines(source, language) {
+        const hashCommentLangs = ['Python', 'Ruby', 'PHP'];
+        const supportsHash = hashCommentLangs.includes(language);
+        let result = '';
+        let i = 0;
+        const n = source.length;
+        let inString = false;
+        let stringDelim = '';
+        let inSingleLineComment = false;
+        let inMultiLineComment = false;
+
+        while (i < n) {
+          const ch = source[i];
+          const next = i + 1 < n ? source[i + 1] : '';
+
+          if (inSingleLineComment) {
+            if (ch === '\\n') {
+              inSingleLineComment = false;
+              result += '\\n';
+            } else {
+              result += ' ';
+            }
+            i++;
+            continue;
+          }
+
+          if (inMultiLineComment) {
+            if (ch === '*' && next === '/') {
+              inMultiLineComment = false;
+              result += '  ';
+              i += 2;
+            } else if (ch === '\\n') {
+              result += '\\n';
+              i++;
+            } else {
+              result += ' ';
+              i++;
+            }
+            continue;
+          }
+
+          if (inString) {
+            if (ch === '\\\\' && i + 1 < n) {
+              result += source[i] + source[i + 1];
+              i += 2;
+              continue;
+            }
+            if (ch === stringDelim) {
+              inString = false;
+              stringDelim = '';
+            }
+            result += ch;
+            i++;
+            continue;
+          }
+
+          // Detect start of string literal
+          if (ch === '"' || ch === "'" || ch === '\`') {
+            inString = true;
+            stringDelim = ch;
+            result += ch;
+            i++;
+            continue;
+          }
+
+          // Detect start of /* multi-line comment */
+          if (ch === '/' && next === '*') {
+            inMultiLineComment = true;
+            result += '  ';
+            i += 2;
+            continue;
+          }
+
+          // Detect start of // single-line comment
+          if (ch === '/' && next === '/') {
+            inSingleLineComment = true;
+            result += '  ';
+            i += 2;
+            continue;
+          }
+
+          // Detect start of # single-line comment for Python/Ruby/PHP
+          if (supportsHash && ch === '#') {
+            inSingleLineComment = true;
+            result += ' ';
+            i++;
+            continue;
+          }
+
+          result += ch;
+          i++;
+        }
+        return result;
+      }
+
+      self.onmessage = function(e) {
+        const { files, rules } = e.data;
+        const startTime = performance.now();
+        const findings = [];
+        let totalLoc = 0;
+        let suppressedCount = 0;
+        const langCounts = {};
+
+        for (const file of files) {
+          const { path, language, content } = file;
+          langCounts[language] = (langCounts[language] || 0) + 1;
+          const rawLines = content.split(/\\r?\\n/);
+          totalLoc += rawLines.length;
+
+          // Identify lines with inline suppression tags BEFORE stripping comments
+          const suppressedLines = new Set();
+          for (let idx = 0; idx < rawLines.length; idx++) {
+            if (/(?:\\/\\/|#)\\s*polyscan:ignore\\b/i.test(rawLines[idx])) {
+              suppressedLines.add(idx + 1);
+            }
+          }
+
+          // Strip comments while preserving exact line & character offsets
+          const strippedContent = stripCommentsPreservingLines(content, language);
+          const strippedLines = strippedContent.split(/\\r?\\n/);
+
+          // Build line start index table for fast offset -> (line, col) conversion
+          const lineOffsets = [0];
+          for (let idx = 0; idx < strippedLines.length; idx++) {
+            lineOffsets.push(lineOffsets[idx] + strippedLines[idx].length + 1);
+          }
+
+          function offsetToLineCol(offset) {
+            let low = 0, high = lineOffsets.length - 2;
+            while (low <= high) {
+              const mid = (low + high) >> 1;
+              if (offset >= lineOffsets[mid] && offset < lineOffsets[mid + 1]) {
+                return { line: mid + 1, col: offset - lineOffsets[mid] + 1 };
+              } else if (offset < lineOffsets[mid]) {
+                high = mid - 1;
+              } else {
+                low = mid + 1;
+              }
+            }
+            return { line: 1, col: 1 };
+          }
+
+          // 1. Run Deterministic Security Rules Matrix
+          for (const rule of rules) {
+            if (!rule.languages.includes('*') && !rule.languages.includes(language)) {
+              continue;
+            }
+            const regex = new RegExp(rule.pattern, rule.flags);
+            let match;
+            while ((match = regex.exec(strippedContent)) !== null) {
+              const pos = offsetToLineCol(match.index);
+              if (suppressedLines.has(pos.line)) {
+                suppressedCount++;
+                continue;
+              }
+              findings.push({
+                id: 'F-' + (findings.length + 1) + '-' + Date.now().toString(36),
+                ruleId: rule.id,
+                title: rule.title,
+                severity: rule.severity,
+                cwe: rule.cwe,
+                owasp: rule.owasp,
+                language: language,
+                filePath: path,
+                line: pos.line,
+                column: pos.col,
+                matchText: match[0].trim().slice(0, 140),
+                description: rule.description,
+                remediation: rule.remediation,
+                entropy: null
+              });
+              if (match.index === regex.lastIndex) regex.lastIndex++;
+            }
+          }
+
+          // 2. Universal Real-Time Shannon Entropy Secret Scanner on Variable Assignments
+          const entropyAssignRegex = /\\b([a-zA-Z_][a-zA-Z0-9_]*(?:KEY|SECRET|TOKEN|PASSWORD|PASSWD|PWD|CREDENTIAL|AUTH|API|PRIVATE)[a-zA-Z0-9_]*)\\s*(?::=|=>|=|:)\\s*["']([^"'\\s]{16,120})["']/gi;
+          let entMatch;
+          while ((entMatch = entropyAssignRegex.exec(strippedContent)) !== null) {
+            const varName = entMatch[1];
+            const secretCandidate = entMatch[2];
+            const pos = offsetToLineCol(entMatch.index);
+
+            if (suppressedLines.has(pos.line)) {
+              suppressedCount++;
+              continue;
+            }
+
+            // Skip if already caught by a specific signature on the exact same line (e.g., AKIA, sk_live_, ghp_, eyJ)
+            const alreadyCaught = findings.some(f => f.filePath === path && f.line === pos.line && f.ruleId.startsWith('SEC-'));
+            if (alreadyCaught) continue;
+
+            const H = calculateShannonEntropy(secretCandidate);
+            if (H >= 4.15) {
+              findings.push({
+                id: 'F-' + (findings.length + 1) + '-' + Date.now().toString(36),
+                ruleId: 'SEC-ENTROPY-006',
+                title: 'High-Entropy Secret / API Credential Assignment (' + varName + ')',
+                severity: H >= 4.55 ? 'CRITICAL' : 'HIGH',
+                cwe: 'CWE-798',
+                owasp: 'A02:2021-Cryptographic Failures',
+                language: language,
+                filePath: path,
+                line: pos.line,
+                column: pos.col,
+                matchText: varName + ' = "' + secretCandidate.slice(0, 8) + '...' + secretCandidate.slice(-4) + '"',
+                description: 'Variable "' + varName + '" is assigned a high-randomness string literal with Shannon Entropy H(X) = ' + H.toFixed(2) + ' bits/char (threshold >= 4.15), strongly indicating a raw API key, cryptographic secret, or hardcoded password.',
+                remediation: '// Move high-entropy secrets out of source code into environment variables or secret vaults:\\n' + varName + ' = os.getenv("' + varName.toUpperCase() + '")',
+                entropy: Number(H.toFixed(2))
+              });
+            }
+          }
+        }
+
+        // Sort findings by Severity priority: CRITICAL > HIGH > MEDIUM > LOW
+        const sevRank = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+        findings.sort((a, b) => (sevRank[a.severity] ?? 9) - (sevRank[b.severity] ?? 9) || a.filePath.localeCompare(b.filePath) || a.line - b.line);
+
+        const elapsedMs = Number((performance.now() - startTime).toFixed(1));
+        self.postMessage({
+          findings,
+          totalFiles: files.length,
+          totalLoc,
+          suppressedCount,
+          langCounts,
+          elapsedMs
+        });
+      };
+    `;
+
+    /*************************************************************************
+     * 5. APPLICATION STATE & INDEXEDDB PERSISTENCE (`polyscan_web_db`)
+     *************************************************************************/
+    const state = {
+      files: [],           // [{ path, language, content }]
+      findings: [],        // Filtered/sorted findings from Web Worker
+      selectedFindingId: null,
+      selectedFilePath: null,
+      contextOnlyMode: false,
+      filterSeverity: 'ALL',
+      filterLanguage: 'ALL',
+      filterQuery: '',
+      exportFormat: 'sarif',
+      skippedPathsCount: 0,
+      telemetry: {
+        totalFiles: 0,
+        totalLoc: 0,
+        elapsedMs: 0,
+        suppressedCount: 0,
+        langCounts: {}
+      }
+    };
+
+    let scanWorker = null;
+
+    function initWebWorker() {
+      const blob = new Blob([WORKER_SOURCE], { type: 'application/javascript' });
+      const workerUrl = URL.createObjectURL(blob);
+      scanWorker = new Worker(workerUrl);
+      scanWorker.onmessage = function(e) {
+        const { findings, totalFiles, totalLoc, suppressedCount, langCounts, elapsedMs } = e.data;
+        state.findings = findings;
+        state.telemetry = { totalFiles, totalLoc, suppressedCount, langCounts, elapsedMs };
+        document.getElementById('scan-spinner').classList.add('hidden');
+
+        if (findings.length > 0) {
+          state.selectedFindingId = findings[0].id;
+          state.selectedFilePath = findings[0].filePath;
+        } else if (state.files.length > 0) {
+          state.selectedFindingId = null;
+          state.selectedFilePath = state.files[0].path;
+        }
+
+        renderAll();
+        showToast(`Scan finished: ${findings.length} findings across ${totalFiles} files in ${elapsedMs} ms`, 'emerald');
+      };
+    }
+
+    // IndexedDB Wrapper (`polyscan_web_db`)
+    function openPolyscanDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open('polyscan_web_db', 1);
+        req.onupgradeneeded = function(ev) {
+          const db = ev.target.result;
+          if (!db.objectStoreNames.contains('workspaces')) {
+            db.createObjectStore('workspaces', { keyPath: 'id' });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function saveWorkspaceToIndexedDB() {
+      try {
+        const db = await openPolyscanDB();
+        const tx = db.transaction('workspaces', 'readwrite');
+        const store = tx.objectStore('workspaces');
+        const payload = {
+          id: 'latest_scan',
+          savedAt: new Date().toISOString(),
+          files: state.files,
+          findings: state.findings,
+          telemetry: state.telemetry,
+          skippedPathsCount: state.skippedPathsCount
+        };
+        store.put(payload);
+        await new Promise((res, rej) => {
+          tx.oncomplete = res;
+          tx.onerror = rej;
+        });
+        showToast('Workspace snapshot saved to IndexedDB (polyscan_web_db)', 'emerald');
+      } catch (err) {
+        showToast('IndexedDB Save Error: ' + (err.message || 'Storage restricted'), 'fuchsia');
+      }
+    }
+
+    async function restoreWorkspaceFromIndexedDB() {
+      try {
+        const db = await openPolyscanDB();
+        const tx = db.transaction('workspaces', 'readonly');
+        const store = tx.objectStore('workspaces');
+        const req = store.get('latest_scan');
+        const record = await new Promise((res, rej) => {
+          req.onsuccess = () => res(req.result);
+          req.onerror = rej;
+        });
+        if (!record || !record.files || record.files.length === 0) {
+          showToast('No saved scan found in IndexedDB (polyscan_web_db)', 'amber');
+          return;
+        }
+        state.files = record.files;
+        state.findings = record.findings || [];
+        state.telemetry = record.telemetry || { totalFiles: 0, totalLoc: 0, elapsedMs: 0, suppressedCount: 0, langCounts: {} };
+        state.skippedPathsCount = record.skippedPathsCount || 0;
+        if (state.findings.length > 0) {
+          state.selectedFindingId = state.findings[0].id;
+          state.selectedFilePath = state.findings[0].filePath;
+        } else if (state.files.length > 0) {
+          state.selectedFilePath = state.files[0].path;
+        }
+        renderAll();
+        showToast(`Restored ${state.findings.length} findings from IndexedDB (${new Date(record.savedAt).toLocaleTimeString()})`, 'cyan');
+      } catch (err) {
+        showToast('IndexedDB Restore Error: ' + (err.message || 'Unavailable'), 'fuchsia');
+      }
+    }
+
+    /*************************************************************************
+     * 6. FILE & FOLDER INGESTION WITH AUTOMATIC SKIP LIST & EXTENSION ROUTING
+     *************************************************************************/
+    function shouldSkipPath(relativePath) {
+      const segments = relativePath.replace(/\\/g, '/').split('/');
+      for (const seg of segments) {
+        if (IGNORED_DIRECTORIES.includes(seg)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function detectLanguageFromPath(filepath) {
+      const lower = filepath.toLowerCase();
+      const dotIdx = lower.lastIndexOf('.');
+      if (dotIdx === -1) return null;
+      const ext = lower.slice(dotIdx);
+      return EXTENSION_MAP[ext] || null;
+    }
+
+    async function handleFileListIngestion(fileList) {
+      const validFiles = [];
+      let skipped = 0;
+
+      for (let i = 0; i < fileList.length; i++) {
+        const f = fileList[i];
+        const relPath = f.webkitRelativePath || f.name;
+        if (shouldSkipPath(relPath)) {
+          skipped++;
+          continue;
+        }
+        const lang = detectLanguageFromPath(relPath);
+        if (!lang) {
+          skipped++;
+          continue;
+        }
+        const text = await f.text();
+        validFiles.push({
+          path: relPath,
+          language: lang,
+          content: text
+        });
+      }
+
+      state.skippedPathsCount += skipped;
+      document.getElementById('skipped-counter').textContent = `Skipped ignored paths: ${state.skippedPathsCount}`;
+
+      if (validFiles.length === 0) {
+        showToast('No supported polyglot source files found in selection.', 'amber');
+        return;
+      }
+
+      // Merge or replace files by path
+      const pathMap = new Map(state.files.map(item => [item.path, item]));
+      for (const vf of validFiles) {
+        pathMap.set(vf.path, vf);
+      }
+      state.files = Array.from(pathMap.values());
+      triggerWorkerScan();
+    }
+
+    // Recursive FileSystemEntry traversal for drag-and-drop directories
+    async function traverseFileTreeEntry(entry, pathPrefix = '') {
+      const collected = [];
+      if (entry.isFile) {
+        const fullPath = pathPrefix + entry.name;
+        if (shouldSkipPath(fullPath)) {
+          state.skippedPathsCount++;
+          return collected;
+        }
+        const lang = detectLanguageFromPath(fullPath);
+        if (!lang) {
+          state.skippedPathsCount++;
+          return collected;
+        }
+        const fileObj = await new Promise((res, rej) => entry.file(res, rej));
+        const content = await fileObj.text();
+        collected.push({ path: fullPath, language: lang, content });
+      } else if (entry.isDirectory) {
+        if (IGNORED_DIRECTORIES.includes(entry.name)) {
+          state.skippedPathsCount++;
+          return collected;
+        }
+        const dirReader = entry.createReader();
+        const entries = await new Promise((res, rej) => dirReader.readEntries(res, rej));
+        for (const childEntry of entries) {
+          const sub = await traverseFileTreeEntry(childEntry, pathPrefix + entry.name + '/');
+          collected.push(...sub);
+        }
+      }
+      return collected;
+    }
+
+    function triggerWorkerScan() {
+      if (!scanWorker) initWebWorker();
+      document.getElementById('scan-spinner').classList.remove('hidden');
+      scanWorker.postMessage({
+        files: state.files,
+        rules: SECURITY_RULES
+      });
+    }
+
+    /*************************************************************************
+     * 7. UI RENDERING: TELEMETRY, DETECTION STREAM, CODE VIEWER & REMEDIATION
+     *************************************************************************/
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function getFilteredFindings() {
+      return state.findings.filter(f => {
+        if (state.filterSeverity !== 'ALL' && f.severity !== state.filterSeverity) return false;
+        if (state.filterLanguage !== 'ALL' && f.language !== state.filterLanguage) return false;
+        if (state.filterQuery.trim() !== '') {
+          const q = state.filterQuery.toLowerCase();
+          const hay = `${f.ruleId} ${f.cwe} ${f.owasp} ${f.title} ${f.filePath} ${f.matchText}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    function renderAll() {
+      renderTelemetryHUD();
+      renderLanguagePills();
+      renderFileDropdown();
+      renderFindingsList();
+      renderCodeViewer();
+      renderRemediationInspector();
+    }
+
+    function renderTelemetryHUD() {
+      document.getElementById('hud-files').textContent = state.telemetry.totalFiles;
+      document.getElementById('hud-loc').textContent = state.telemetry.totalLoc.toLocaleString();
+      document.getElementById('hud-time').textContent = `${state.telemetry.elapsedMs} ms`;
+      document.getElementById('hud-suppressed').textContent = state.telemetry.suppressedCount;
+      document.getElementById('skipped-counter').textContent = `Skipped ignored paths: ${state.skippedPathsCount}`;
+
+      const counts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+      for (const f of state.findings) {
+        counts[f.severity] = (counts[f.severity] || 0) + 1;
+      }
+      document.getElementById('hud-crit').textContent = counts.CRITICAL;
+      document.getElementById('hud-high').textContent = counts.HIGH;
+      document.getElementById('hud-med').textContent = counts.MEDIUM;
+      document.getElementById('hud-low').textContent = counts.LOW;
+    }
+
+    function renderLanguagePills() {
+      const container = document.getElementById('lang-pill-strip');
+      let html = '<span class="text-slate-500 mr-1">POLYGLOT ROUTER:</span>';
+      for (const lang of TARGET_LANGUAGES) {
+        const count = state.telemetry.langCounts[lang] || 0;
+        const isActive = state.filterLanguage === lang;
+        const pillClass = isActive
+          ? 'bg-neon-cyan text-obsidian-950 font-bold border-neon-cyan'
+          : count > 0
+            ? 'bg-obsidian-900 text-neon-cyan border-neon-cyan/40 hover:bg-neon-cyan/15'
+            : 'bg-obsidian-950 text-slate-500 border-slate-800 hover:border-slate-700';
+        html += `<button type="button" data-lang="${lang}" class="lang-pill-btn px-2 py-0.5 rounded border text-[10px] transition">${escapeHtml(lang)} (${count})</button>`;
+      }
+      container.innerHTML = html;
+
+      container.querySelectorAll('.lang-pill-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const clickedLang = btn.getAttribute('data-lang');
+          state.filterLanguage = state.filterLanguage === clickedLang ? 'ALL' : clickedLang;
+          document.getElementById('filter-language').value = state.filterLanguage;
+          renderAll();
+        });
+      });
+    }
+
+    function renderFileDropdown() {
+      const sel = document.getElementById('viewer-file-select');
+      let html = '<option value="">Jump to Scanned File...</option>';
+      for (const f of state.files) {
+        const selected = f.path === state.selectedFilePath ? 'selected' : '';
+        html += `<option value="${escapeHtml(f.path)}" ${selected}>[${escapeHtml(f.language)}] ${escapeHtml(f.path)}</option>`;
+      }
+      sel.innerHTML = html;
+    }
+
+    function getSeverityStyle(sev) {
+      switch (sev) {
+        case 'CRITICAL':
+          return 'bg-fuchsia-950/90 text-neon-fuchsia border border-neon-fuchsia/60';
+        case 'HIGH':
+          return 'bg-amber-950/90 text-neon-amber border border-neon-amber/60';
+        case 'MEDIUM':
+          return 'bg-cyan-950/90 text-neon-cyan border border-neon-cyan/60';
+        default:
+          return 'bg-emerald-950/90 text-neon-emerald border border-neon-emerald/60';
+      }
+    }
+
+    function renderFindingsList() {
+      const filtered = getFilteredFindings();
+      document.getElementById('findings-visible-count').textContent = `${filtered.length} / ${state.findings.length} shown`;
+      const container = document.getElementById('findings-list');
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 px-4 font-mono text-xs text-slate-500">
+            No vulnerabilities match the active filter criteria.
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      for (const f of filtered) {
+        const isSelected = f.id === state.selectedFindingId;
+        const cardBorder = isSelected
+          ? 'neon-border-fuchsia bg-obsidian-800/95'
+          : 'border-slate-800/90 bg-obsidian-900/60 hover:bg-obsidian-800/60 hover:border-cyan-500/30';
+
+        html += `
+          <div data-finding-id="${escapeHtml(f.id)}" class="finding-card cursor-pointer rounded-lg p-2.5 border transition ${cardBorder}">
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <div class="flex items-center gap-1.5">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${getSeverityStyle(f.severity)}">${f.severity}</span>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-obsidian-950 text-neon-cyan border border-slate-800">${escapeHtml(f.cwe)}</span>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-obsidian-950 text-slate-300 border border-slate-800">${escapeHtml(f.language)}</span>
+              </div>
+              <span class="text-[10px] font-mono text-slate-400">L${f.line}:${f.column}</span>
+            </div>
+            <div class="text-xs font-semibold text-slate-100 leading-snug mb-1">${escapeHtml(f.title)}</div>
+            <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
+              <span class="truncate max-w-[220px]">${escapeHtml(f.filePath)}</span>
+              ${f.entropy ? `<span class="text-neon-amber">H=${f.entropy}</span>` : `<span class="text-slate-500">${escapeHtml(f.ruleId)}</span>`}
+            </div>
+          </div>
+        `;
+      }
+      container.innerHTML = html;
+
+      container.querySelectorAll('.finding-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const fid = card.getAttribute('data-finding-id');
+          const found = state.findings.find(x => x.id === fid);
+          if (found) {
+            state.selectedFindingId = found.id;
+            state.selectedFilePath = found.filePath;
+            renderAll();
+          }
+        });
+      });
+    }
+
+    function renderCodeViewer() {
+      const container = document.getElementById('code-viewer-container');
+      const selectedFinding = state.findings.find(x => x.id === state.selectedFindingId) || null;
+      const targetPath = selectedFinding ? selectedFinding.filePath : state.selectedFilePath;
+      const fileObj = state.files.find(f => f.path === targetPath);
+
+      if (!fileObj) {
+        document.getElementById('viewer-lang-badge').textContent = 'IDLE';
+        document.getElementById('viewer-filepath').textContent = 'No file selected';
+        container.innerHTML = `<div class="p-8 text-center text-slate-500 font-mono text-xs">Load a preset suite or drop source files to inspect code.</div>`;
+        return;
+      }
+
+      document.getElementById('viewer-lang-badge').textContent = fileObj.language.toUpperCase();
+      document.getElementById('viewer-filepath').textContent = fileObj.path;
+
+      const lines = fileObj.content.split(/\r?\n/);
+      const targetLine = selectedFinding && selectedFinding.filePath === fileObj.path ? selectedFinding.line : -1;
+      const minContext = targetLine > 0 ? Math.max(1, targetLine - 2) : -1;
+      const maxContext = targetLine > 0 ? Math.min(lines.length, targetLine + 2) : -1;
+
+      let html = '<div class="py-2">';
+      for (let i = 0; i < lines.length; i++) {
+        const lineNum = i + 1;
+        const isTarget = lineNum === targetLine;
+        const isContext = !isTarget && targetLine > 0 && lineNum >= minContext && lineNum <= maxContext;
+
+        if (state.contextOnlyMode && targetLine > 0 && !isTarget && !isContext) {
+          continue;
+        }
+
+        const rowClass = isTarget
+          ? 'code-line-target text-white font-semibold'
+          : isContext
+            ? 'code-line-context text-slate-200'
+            : 'code-line-normal text-slate-400 hover:bg-slate-900/50';
+
+        const badgeHtml = isTarget
+          ? `<span class="ml-3 px-1.5 py-0.5 rounded text-[10px] bg-neon-fuchsia text-obsidian-950 font-bold uppercase tracking-wider">◄ ${escapeHtml(selectedFinding.cwe)} TARGET</span>`
+          : isContext
+            ? `<span class="ml-3 text-[10px] text-neon-cyan/70">±2 CONTEXT</span>`
+            : '';
+
+        html += `
+          <div id="code-line-${lineNum}" class="flex items-baseline px-3 py-0.5 ${rowClass}">
+            <span class="w-12 shrink-0 text-right pr-4 select-none text-[11px] ${isTarget ? 'text-neon-fuchsia font-bold' : 'text-slate-600'}">${lineNum}</span>
+            <pre class="flex-1 whitespace-pre overflow-x-auto">${escapeHtml(lines[i]) || ' '}${badgeHtml}</pre>
+          </div>
+        `;
+      }
+      html += '</div>';
+      container.innerHTML = html;
+
+      // Auto-scroll to highlighted target line
+      if (targetLine > 0 && !state.contextOnlyMode) {
+        const el = document.getElementById(`code-line-${targetLine}`);
+        if (el) {
+          el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+      }
+    }
+
+    function renderRemediationInspector() {
+      const selectedFinding = state.findings.find(x => x.id === state.selectedFindingId);
+      const emptyEl = document.getElementById('remediation-empty');
+      const contentEl = document.getElementById('remediation-content');
+
+      if (!selectedFinding) {
+        emptyEl.classList.remove('hidden');
+        contentEl.classList.add('hidden');
+        return;
+      }
+
+      emptyEl.classList.add('hidden');
+      contentEl.classList.remove('hidden');
+
+      const sevEl = document.getElementById('rem-severity');
+      sevEl.textContent = selectedFinding.severity;
+      sevEl.className = `px-2 py-0.5 rounded text-xs font-mono font-bold ${getSeverityStyle(selectedFinding.severity)}`;
+
+      document.getElementById('rem-rule-id').textContent = selectedFinding.ruleId;
+      document.getElementById('rem-cwe').textContent = selectedFinding.cwe;
+      document.getElementById('rem-owasp').textContent = selectedFinding.owasp;
+
+      const entBadge = document.getElementById('rem-entropy-badge');
+      if (selectedFinding.entropy !== null) {
+        entBadge.textContent = `Shannon H(X) = ${selectedFinding.entropy} bits/char`;
+        entBadge.classList.remove('hidden');
+      } else {
+        entBadge.classList.add('hidden');
+      }
+
+      document.getElementById('rem-title').textContent = selectedFinding.title;
+      document.getElementById('rem-coords').textContent = `${selectedFinding.filePath}:${selectedFinding.line}:${selectedFinding.column}`;
+      const startCtx = Math.max(1, selectedFinding.line - 2);
+      const endCtx = selectedFinding.line + 2;
+      document.getElementById('rem-window-range').textContent = `Lines ${startCtx}–${endCtx} (±2 Contextual Focus)`;
+      document.getElementById('rem-description').textContent = selectedFinding.description;
+      document.getElementById('rem-match').textContent = selectedFinding.matchText;
+      document.getElementById('rem-fix-code').textContent = selectedFinding.remediation;
+    }
+
+    /*************************************************************************
+     * 8. MULTI-FORMAT EXPORT GENERATORS (SARIF 2.1.0, JSON, MARKDOWN)
+     *************************************************************************/
+    function generateSarifReport() {
+      const rulesList = SECURITY_RULES.map(r => ({
+        id: r.id,
+        name: r.title.replace(/\s+/g, ''),
+        shortDescription: { text: r.title },
+        fullDescription: { text: r.description },
+        help: { text: r.remediation },
+        properties: {
+          tags: ['security', r.cwe, r.owasp],
+          'security-severity': r.severity === 'CRITICAL' ? '9.5' : r.severity === 'HIGH' ? '7.8' : r.severity === 'MEDIUM' ? '5.5' : '3.0'
+        }
+      }));
+
+      const results = state.findings.map(f => ({
+        ruleId: f.ruleId,
+        level: f.severity === 'CRITICAL' || f.severity === 'HIGH' ? 'error' : 'warning',
+        message: {
+          text: `${f.title} (${f.cwe} / ${f.owasp}). Matched: ${f.matchText}`
+        },
+        locations: [
+          {
+            physicalLocation: {
+              artifactLocation: { uri: f.filePath },
+              region: {
+                startLine: f.line,
+                startColumn: f.column
+              }
+            }
+          }
+        ]
+      }));
+
+      const sarif = {
+        $schema: 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
+        version: '2.1.0',
+        runs: [
+          {
+            tool: {
+              driver: {
+                name: 'POLY//SCAN WEB Static Analyzer',
+                informationUri: 'https://owasp.org/www-project-top-ten/',
+                version: '4.2.0',
+                rules: rulesList
+              }
+            },
+            results
+          }
+        ]
+      };
+      return JSON.stringify(sarif, null, 2);
+    }
+
+    function generateJsonReport() {
+      return JSON.stringify({
+        scanner: 'POLY//SCAN WEB v4.2 (Air-Gapped Client-Side Workbench)',
+        generatedAt: new Date().toISOString(),
+        telemetry: state.telemetry,
+        findings: state.findings
+      }, null, 2);
+    }
+
+    function generateMarkdownReport() {
+      let md = `# POLY//SCAN WEB — Static Security Audit Report\n\n`;
+      md += `- **Generated At:** ${new Date().toISOString()}\n`;
+      md += `- **Files Scanned:** ${state.telemetry.totalFiles}\n`;
+      md += `- **Lines of Code (LOC):** ${state.telemetry.totalLoc}\n`;
+      md += `- **Execution Time:** ${state.telemetry.elapsedMs} ms\n`;
+      md += `- **Total Findings:** ${state.findings.length} (Inline Suppressed: ${state.telemetry.suppressedCount})\n\n`;
+      md += `## Vulnerability Breakdown\n\n`;
+      md += `| Severity | Rule ID | CWE | OWASP Category | Language | Coordinates | Title |\n`;
+      md += `| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n`;
+      for (const f of state.findings) {
+        md += `| **${f.severity}** | \`${f.ruleId}\` | ${f.cwe} | ${f.owasp} | ${f.language} | \`${f.filePath}:${f.line}:${f.column}\` | ${f.title} |\n`;
+      }
+      md += `\n## Detailed Remediation Guidance\n\n`;
+      for (const f of state.findings) {
+        md += `### [${f.severity}] ${f.title} (\`${f.filePath}:${f.line}\`)\n`;
+        md += `- **Rule:** \`${f.ruleId}\` | **CWE:** \`${f.cwe}\` | **OWASP:** \`${f.owasp}\`\n`;
+        md += `- **Analysis:** ${f.description}\n`;
+        md += `- **Recommended Fix:**\n\`\`\`\n${f.remediation}\n\`\`\`\n\n`;
+      }
+      return md;
+    }
+
+    function updateExportModalContent() {
+      const area = document.getElementById('export-preview-area');
+      if (state.exportFormat === 'sarif') {
+        area.value = generateSarifReport();
+      } else if (state.exportFormat === 'json') {
+        area.value = generateJsonReport();
+      } else {
+        area.value = generateMarkdownReport();
+      }
+    }
+
+    /*************************************************************************
+     * 9. TOAST NOTIFICATIONS & CLIPBOARD HELPER
+     *************************************************************************/
+    function showToast(message, color = 'cyan') {
+      const stack = document.getElementById('toast-stack');
+      const toast = document.createElement('div');
+      const borderMap = {
+        cyan: 'border-neon-cyan text-neon-cyan',
+        emerald: 'border-neon-emerald text-neon-emerald',
+        fuchsia: 'border-neon-fuchsia text-neon-fuchsia',
+        amber: 'border-neon-amber text-neon-amber'
+      };
+      toast.className = `pointer-events-auto glass-panel px-3.5 py-2.5 rounded-lg border-l-4 ${borderMap[color] || borderMap.cyan} shadow-lg font-mono text-xs flex items-center justify-between gap-2 transition-all duration-300`;
+      toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
+      stack.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    function copyTextSafe(text, label = 'Copied to clipboard') {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast(label, 'emerald');
+        }).catch(() => fallbackCopy(text, label));
+      } else {
+        fallbackCopy(text, label);
+      }
+    }
+
+    function fallbackCopy(text, label) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast(label, 'emerald');
+      } catch (e) {
+        showToast('Clipboard copy failed', 'fuchsia');
+      }
+      ta.remove();
+    }
+
+    /*************************************************************************
+     * 10. EVENT WIRING & INITIALIZATION
+     *************************************************************************/
+    function loadPresetSuite(suiteKey) {
+      state.skippedPathsCount = 0;
+      if (suiteKey === 'all') {
+        state.files = [
+          ...DEMO_PRESETS.systems,
+          ...DEMO_PRESETS.enterprise,
+          ...DEMO_PRESETS.webscript
+        ];
+      } else {
+        state.files = [...(DEMO_PRESETS[suiteKey] || [])];
+      }
+      triggerWorkerScan();
+    }
+
+    function populateRulesMatrixModal() {
+      document.getElementById('rule-count-label').textContent = SECURITY_RULES.length + 1; // +1 for Shannon Entropy Engine
+      const container = document.getElementById('rules-matrix-table');
+      let html = `
+        <div class="p-3 rounded-lg bg-emerald-950/30 border border-neon-emerald/40 font-mono text-xs mb-2">
+          <div class="flex items-center justify-between">
+            <strong class="text-neon-emerald">SEC-ENTROPY-006 — Real-Time Shannon Entropy Credential Detector</strong>
+            <span class="px-2 py-0.5 rounded bg-obsidian-900 text-neon-emerald">CWE-798 • ALL 11 LANGUAGES</span>
+          </div>
+          <p class="text-slate-300 mt-1">Computes information density H(X) = -Σ P(x) log2 P(x) across token assignments. Flags strings &ge; 16 chars with H(X) &ge; 4.15 bits/char.</p>
+        </div>
+      `;
+      for (const r of SECURITY_RULES) {
+        html += `
+          <div class="p-3 rounded-lg bg-obsidian-900/90 border border-slate-800 font-mono text-xs space-y-1">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${getSeverityStyle(r.severity)}">${r.severity}</span>
+                <strong class="text-white">${escapeHtml(r.id)}: ${escapeHtml(r.title)}</strong>
+              </div>
+              <div class="flex items-center gap-1.5 text-[11px]">
+                <span class="px-2 py-0.5 rounded bg-obsidian-950 text-neon-cyan border border-slate-800">${escapeHtml(r.cwe)}</span>
+                <span class="px-2 py-0.5 rounded bg-obsidian-950 text-slate-300 border border-slate-800">${escapeHtml(r.languages.join(', '))}</span>
+              </div>
+            </div>
+            <p class="text-slate-400 text-[11px]">${escapeHtml(r.description)}</p>
+          </div>
+        `;
+      }
+      container.innerHTML = html;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initWebWorker();
+      populateRulesMatrixModal();
+
+      // Preset Suite Buttons
+      document.getElementById('btn-preset-all').addEventListener('click', () => loadPresetSuite('all'));
+      document.getElementById('btn-preset-systems').addEventListener('click', () => loadPresetSuite('systems'));
+      document.getElementById('btn-preset-enterprise').addEventListener('click', () => loadPresetSuite('enterprise'));
+      document.getElementById('btn-preset-webscript').addEventListener('click', () => loadPresetSuite('webscript'));
+
+      // Clear Workspace
+      document.getElementById('btn-clear-workspace').addEventListener('click', () => {
+        state.files = [];
+        state.findings = [];
+        state.selectedFindingId = null;
+        state.selectedFilePath = null;
+        state.skippedPathsCount = 0;
+        state.telemetry = { totalFiles: 0, totalLoc: 0, elapsedMs: 0, suppressedCount: 0, langCounts: {} };
+        renderAll();
+        showToast('Workbench cleared', 'amber');
+      });
+
+      // File & Folder Inputs
+      const inputFiles = document.getElementById('input-files');
+      const inputFolder = document.getElementById('input-folder');
+      document.getElementById('btn-select-files').addEventListener('click', (e) => {
+        e.stopPropagation();
+        inputFiles.click();
+      });
+      document.getElementById('btn-select-folder').addEventListener('click', (e) => {
+        e.stopPropagation();
+        inputFolder.click();
+      });
+      document.getElementById('drop-zone').addEventListener('click', () => inputFiles.click());
+
+      inputFiles.addEventListener('change', (e) => {
+        if (e.target.files.length) handleFileListIngestion(e.target.files);
+      });
+      inputFolder.addEventListener('change', (e) => {
+        if (e.target.files.length) handleFileListIngestion(e.target.files);
+      });
+
+      // Drag and Drop support (Files + Recursive Folders via webkitGetAsEntry)
+      const dropZone = document.getElementById('drop-zone');
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('neon-border-cyan');
+      });
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('neon-border-cyan');
+      });
+      dropZone.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('neon-border-cyan');
+        const items = e.dataTransfer.items;
+        if (items && items.length > 0 && typeof items[0].webkitGetAsEntry === 'function') {
+          const allCollected = [];
+          for (let i = 0; i < items.length; i++) {
+            const entry = items[i].webkitGetAsEntry();
+            if (entry) {
+              const sub = await traverseFileTreeEntry(entry);
+              allCollected.push(...sub);
+            }
+          }
+          if (allCollected.length > 0) {
+            const pathMap = new Map(state.files.map(item => [item.path, item]));
+            for (const f of allCollected) pathMap.set(f.path, f);
+            state.files = Array.from(pathMap.values());
+            triggerWorkerScan();
+          } else {
+            showToast('No supported source files found in dropped items.', 'amber');
+          }
+        } else if (e.dataTransfer.files.length > 0) {
+          handleFileListIngestion(e.dataTransfer.files);
+        }
+      });
+
+      // Filters
+      document.getElementById('filter-severity').addEventListener('change', (e) => {
+        state.filterSeverity = e.target.value;
+        renderFindingsList();
+      });
+      document.getElementById('filter-language').addEventListener('change', (e) => {
+        state.filterLanguage = e.target.value;
+        renderAll();
+      });
+      document.getElementById('filter-cwe').addEventListener('input', (e) => {
+        state.filterQuery = e.target.value;
+        renderFindingsList();
+      });
+
+      // Header Severity Quick-Filter Badges
+      document.querySelectorAll('.sev-quick-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const sev = btn.getAttribute('data-sev');
+          state.filterSeverity = state.filterSeverity === sev ? 'ALL' : sev;
+          document.getElementById('filter-severity').value = state.filterSeverity;
+          renderFindingsList();
+        });
+      });
+
+      // Code Viewer Controls
+      document.getElementById('viewer-file-select').addEventListener('change', (e) => {
+        if (e.target.value) {
+          state.selectedFilePath = e.target.value;
+          const firstFindingForFile = state.findings.find(f => f.filePath === e.target.value);
+          state.selectedFindingId = firstFindingForFile ? firstFindingForFile.id : null;
+          renderAll();
+        }
+      });
+
+      document.getElementById('btn-toggle-context').addEventListener('click', () => {
+        state.contextOnlyMode = !state.contextOnlyMode;
+        document.getElementById('context-mode-label').textContent = state.contextOnlyMode
+          ? '±2 Lines Only'
+          : 'Full File + ±2 Focus';
+        renderCodeViewer();
+      });
+
+      document.getElementById('btn-copy-remediation').addEventListener('click', () => {
+        const code = document.getElementById('rem-fix-code').textContent;
+        copyTextSafe(code, 'Safe replacement snippet copied');
+      });
+
+      // IndexedDB Save & Restore
+      document.getElementById('btn-save-idb').addEventListener('click', saveWorkspaceToIndexedDB);
+      document.getElementById('btn-load-idb').addEventListener('click', restoreWorkspaceFromIndexedDB);
+
+      // Export Modal
+      const modalExport = document.getElementById('modal-export');
+      document.getElementById('btn-open-export').addEventListener('click', () => {
+        updateExportModalContent();
+        modalExport.classList.remove('hidden');
+      });
+      document.getElementById('btn-close-export').addEventListener('click', () => modalExport.classList.add('hidden'));
+
+      document.querySelectorAll('.export-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.exportFormat = btn.getAttribute('data-format');
+          document.querySelectorAll('.export-tab-btn').forEach(b => {
+            b.className = 'export-tab-btn px-3 py-1.5 rounded-lg font-mono text-xs bg-obsidian-900 text-slate-300 border border-slate-700 hover:border-neon-cyan/40';
+          });
+          btn.className = 'export-tab-btn px-3 py-1.5 rounded-lg font-mono text-xs font-semibold bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/50';
+          updateExportModalContent();
+        });
+      });
+
+      document.getElementById('btn-copy-export').addEventListener('click', () => {
+        const content = document.getElementById('export-preview-area').value;
+        copyTextSafe(content, `Copied ${state.exportFormat.toUpperCase()} report to clipboard`);
+      });
+
+      document.getElementById('btn-download-export').addEventListener('click', () => {
+        const content = document.getElementById('export-preview-area').value;
+        const extMap = { sarif: 'polyscan-report.sarif.json', json: 'polyscan-report.json', markdown: 'polyscan-audit-report.md' };
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = extMap[state.exportFormat] || 'polyscan-report.txt';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        showToast(`Downloaded ${a.download}`, 'cyan');
+      });
+
+      // Rules Matrix Modal
+      const modalRules = document.getElementById('modal-rules');
+      document.getElementById('btn-open-rules').addEventListener('click', () => modalRules.classList.remove('hidden'));
+      document.getElementById('btn-close-rules').addEventListener('click', () => modalRules.classList.add('hidden'));
+
+      // Live Code Scratchpad Modal
+      const modalScratch = document.getElementById('modal-scratchpad');
+      document.getElementById('btn-open-scratchpad').addEventListener('click', () => modalScratch.classList.remove('hidden'));
+      document.getElementById('btn-close-scratchpad').addEventListener('click', () => modalScratch.classList.add('hidden'));
+      document.getElementById('btn-scan-scratchpad').addEventListener('click', () => {
+        const rawPath = document.getElementById('scratch-filename').value.trim() || 'snippet.py';
+        const code = document.getElementById('scratch-code').value;
+        const lang = detectLanguageFromPath(rawPath);
+        if (!lang) {
+          showToast('Unsupported file extension. Use .java, .c, .cpp, .m, .cs, .py, .js, .php, .go, .rs, or .rb', 'fuchsia');
+          return;
+        }
+        const existingIdx = state.files.findIndex(f => f.path === rawPath);
+        if (existingIdx >= 0) {
+          state.files[existingIdx].content = code;
+          state.files[existingIdx].language = lang;
+        } else {
+          state.files.unshift({ path: rawPath, language: lang, content: code });
+        }
+        state.selectedFilePath = rawPath;
+        modalScratch.classList.add('hidden');
+        triggerWorkerScan();
+      });
+
+      // Close modals on Escape key
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          modalExport.classList.add('hidden');
+          modalRules.classList.add('hidden');
+          modalScratch.classList.add('hidden');
+        }
+      });
+
+      // Automatically load the All 11-Language Omni-Suite on boot for immediate verification
+      loadPresetSuite('all');
+    });
+  </script>
+</body>
+</html>
